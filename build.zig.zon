@@ -1,0 +1,11 @@
+.{
+    .name = .loy,
+    .version = "0.0.0",
+    .fingerprint = 0x753055a6197c3e36,
+    .minimum_zig_version = "0.15.0-dev.1273+c334956a5",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}
