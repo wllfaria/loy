@@ -2,7 +2,7 @@
 #define _LEXER_H
 
 #include "string/string_slice.h"
-#include "vector.h"
+#include "collections/vector.h"
 
 typedef enum {
     TOKEN_EQUAL,

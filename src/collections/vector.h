@@ -1,7 +1,7 @@
 #ifndef _VECTOR_H
 #define _VECTOR_H
 
-#include "defines.h"
+#include "../defines.h"
 
 typedef struct {
     void* buf;
@@ -10,7 +10,7 @@ typedef struct {
     u64   t_size;
 } Vector;
 
-typedef void (*free_fn)(void*);
+typedef void (*FreeFn)(void*);
 
 #define vector_push(vec, value)                          \
         do {                                             \
@@ -27,7 +27,7 @@ typedef void (*free_fn)(void*);
         } while(0)
 
 Vector vector_create(void);
-void vector_destroy(Vector* vec, free_fn fn);
+void vector_destroy(Vector* vec, FreeFn fn);
 void* vector_get(Vector* vec, u64 idx);
 
 typedef struct {

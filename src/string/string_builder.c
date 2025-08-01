@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "../vector.h"
+#include "../collections/vector.h"
 
 #include "string_builder.h"
 

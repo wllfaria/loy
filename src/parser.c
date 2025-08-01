@@ -144,6 +144,7 @@ static bool token_is_operator(Token* token) {
     case TOKEN_COMMA:
         return false;
     }
+    return false;
 }
 
 static AstNode* parser_parse_with_precedence(

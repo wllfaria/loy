@@ -1,7 +1,7 @@
 #ifndef _STR_BUILDER_H
 #define _STR_BUILDER_H
 
-#include "../vector.h"
+#include "../collections/vector.h"
 #include "string_slice.h"
 
 typedef struct {

@@ -33,14 +33,12 @@ StringSlice read_file(const char* path) {
 
 int main(void) {
     StringSlice file = read_file("samples/operators.loy");
-
     TokenStream stream = lexer_tokenize_file(file);
     Ast ast = parser_parse_token_stream(&stream);
     vector_inspect(&ast.statements, parser_fmt_node);
 
     lexer_destroy(&stream);
     parser_destroy(&ast);
-
     free(file.ptr);
     return 0;
 }

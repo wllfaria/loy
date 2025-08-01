@@ -1,6 +1,6 @@
 #include "vector.h"
-#include "defines.h"
-#include "string/string_builder.h"
+#include "../defines.h"
+#include "../string/string_builder.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -15,8 +15,11 @@ static u64 vector_min_cap_for_size(u64 t_size) {
     }
 }
 
-inline static void vector_grow_amortized(Vector* vec, u64 additional,
-                                         u64 t_size) {
+inline static void vector_grow_amortized(
+    Vector* vec,
+    u64 additional,
+    u64 t_size
+) {
     u64 required_cap = vec->len + additional;
 
     if(required_cap < vec->len) {
@@ -81,16 +84,16 @@ void __vec_push(Vector* vec, void* item, u64 item_size) {
 
 Vector vector_create(void) {
     Vector vec = {
-        .buf = NULL,
-        .len =    0,
-        .cap =    0,
-        .t_size =    0,
+        .buf    = NULL,
+        .len    = 0,
+        .cap    = 0,
+        .t_size = 0,
     };
 
     return vec;
 }
 
-void vector_destroy(Vector* vec, free_fn free_fn) {
+void vector_destroy(Vector* vec, FreeFn free_fn) {
     VectorIter iter = vector_iter(vec);
 
     if(free_fn != NULL) {
@@ -117,9 +120,9 @@ void vector_inspect(Vector* vec, FmtFn fmt_fn) {
     string_builder_write_string(&builder, "    buf: [\n");
 
     for(u64 i = 0; i < vec->len; i++) {
-        void* raw = vector_get(vec, i);
+        void* raw        = vector_get(vec, i);
         bool  is_pointer = vec->t_size == sizeof(void*);
-        void* item = is_pointer ? *(void**)raw : raw;
+        void* item       = is_pointer ? *(void**)raw : raw;
 
         char* formatted_item = fmt_fn(item, 2);
         string_builder_write_string(&builder, formatted_item);

@@ -52,6 +52,7 @@ static const char* lexer_fmt_token_kind(TokenKind kind) {
     case TOKEN_THIN_ARROW: return "TOKEN_THIN_ARROW";
     case TOKEN_COMMA: return "TOKEN_COMMA";
     }
+    return "";
 }
 
 char* lexer_fmt_token(void* item, u64 indentation) {
@@ -236,8 +237,8 @@ TokenStream lexer_tokenize_file(StringSlice file) {
             continue;
         }
 
-        printf("Unknown token %c\n", curr);
-        exit(EXIT_SUCCESS);
+        fprintf(stderr, "Unknown token %c\n", curr);
+        exit(EXIT_FAILURE);
     }
 
     TokenStream stream = { .tokens = tokens };
