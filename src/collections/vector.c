@@ -44,9 +44,21 @@ static void vector_resize_inner(Vector* vec, u64 additional, u64 t_size) {
         return;
     }
 
-    if(vec->len + additional > vec->cap) {
-        vector_grow_amortized(vec, additional, t_size);
+    // Edge case when the vector was initialized with a fixed capacity
+    if(vec->len == 0 && vec->fixed_cap && vec->buf == NULL) {
+        vec->buf = malloc(t_size * vec->cap);
+        return;
     }
+
+    // Only resize a vector that doesn't have a fixed capacity.
+    if(vec->len + additional <= vec->cap) return;
+
+    if(vec->fixed_cap) {
+        fprintf(stderr, "Attempted to grow vector with fixed capacity\n");
+        exit(EXIT_FAILURE);
+    }
+
+    vector_grow_amortized(vec, additional, t_size);
 }
 
 static void vector_push_inner(Vector* vec, void* item, u64 t_size) {
@@ -84,12 +96,24 @@ void __vec_push(Vector* vec, void* item, u64 item_size) {
 
 Vector vector_create(void) {
     Vector vec = {
-        .buf    = NULL,
-        .len    = 0,
-        .cap    = 0,
-        .t_size = 0,
+        .buf       = NULL,
+        .len       = 0,
+        .cap       = 0,
+        .t_size    = 0,
+        .fixed_cap = false,
     };
 
+    return vec;
+}
+
+Vector vector_create_with_capacity(u64 capacity) {
+    Vector vec = {
+        .buf       = NULL,
+        .len       = 0,
+        .cap       = capacity,
+        .t_size    = 0,
+        .fixed_cap = true,
+    };
     return vec;
 }
 
@@ -143,17 +167,13 @@ VectorIter vector_iter(Vector* vec) {
 }
 
 void* vector_iter_next(VectorIter* iter) {
-    if(iter->cursor >= iter->vec->len) {
-        return NULL;
-    }
+    if(iter->cursor >= iter->vec->len) return NULL;
     u64 pos = iter->cursor;
     iter->cursor++;
     return vector_get(iter->vec, pos);
 }
 
 void* vector_iter_peek(VectorIter* iter) {
-    if(iter->cursor >= iter->vec->len) {
-        return NULL;
-    }
+    if(iter->cursor >= iter->vec->len) return NULL;
     return vector_get(iter->vec, iter->cursor);
 }

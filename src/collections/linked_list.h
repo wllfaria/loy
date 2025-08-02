@@ -14,8 +14,6 @@ typedef struct {
     u64             len;
 } LinkedList;
 
-typedef void (*FreeFn)(void*);
-
 LinkedList linked_list_create(void);
 void linked_list_destroy(LinkedList* list, FreeFn free_fn);
 
@@ -30,5 +28,14 @@ LinkedListItem* linked_list_get_tail(LinkedList* list);
 LinkedListItem* linked_list_remove_idx(LinkedList* list, u64 idx);
 LinkedListItem* linked_list_remove_head(LinkedList* list);
 LinkedListItem* linked_list_remove_tail(LinkedList* list);
+
+typedef struct {
+    LinkedList* list;
+    u64         cursor;
+} LinkedListIter;
+
+LinkedListIter linked_list_iter_create(LinkedList* list);
+void* linked_list_iter_peek(LinkedListIter* iter);
+void* linked_list_iter_next(LinkedListIter* iter);
 
 #endif

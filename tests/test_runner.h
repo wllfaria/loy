@@ -29,17 +29,17 @@ void test_runner_run(TestConfig* config);
 void test_error_print(const char* file, u64 line, const char* fmt, ...);
 
 #define test_error_fmt(fmt, ...) \
-        test_error_print(__FILE__, __LINE__, fmt, __VA_ARGS__)
+    test_error_print(__FILE__, __LINE__, fmt, __VA_ARGS__)
 
-#define test_error(msg)            \
-        test_error_fmt("%s", msg); \
-        exit(EXIT_SUCCESS);
+#define test_error(msg)        \
+    test_error_fmt("%s", msg); \
+    exit(EXIT_SUCCESS);
 
-#define test_assert(expr)                           \
-        do                                          \
-        if(!(expr)) {                               \
-            test_error("Assertion failed: " #expr); \
-        }                                           \
-        while(0)
+#define test_assert(expr)                       \
+    do                                          \
+    if(!LIKELY_(expr)) {                        \
+        test_error("Assertion failed: " #expr); \
+    }                                           \
+    while(0)
 
 #endif

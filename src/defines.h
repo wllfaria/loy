@@ -19,18 +19,28 @@ typedef long  i64;
 typedef float  f32;
 typedef double f64;
 
+typedef void (*FreeFn)(void*);
+
 #define LOY_MAX(a, b) (a > b ? a : b)
 #define LOY_MIN(a, b) (a < b ? a : b)
 
 #define PP_SPACES 4
 
-#define UNREACHABLE(...)                                         \
-        do {                                                     \
-            fprintf(stderr, "[FATAL] Entered unreachable code"); \
-            if(*#__VA_ARGS__) fprintf(stderr, ": " __VA_ARGS__); \
-            fprintf(stderr, ".\n");                              \
-            fprintf(stderr, "@ %s:%d\n", __FILE__, __LINE__);    \
-            abort();                                             \
-        } while(0)
+#if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
+    #define LIKELY_(x)   __builtin_expect(x, 1)
+    #define UNLIKELY_(x) __builtin_expect(x, 0)
+#else
+    #define LIKELY_(x)   (x)
+    #define UNLIKELY_(x) (x)
+#endif
+
+#define UNREACHABLE(...)                                     \
+    do {                                                     \
+        fprintf(stderr, "[FATAL] Entered unreachable code"); \
+        if(*#__VA_ARGS__) fprintf(stderr, ": " __VA_ARGS__); \
+        fprintf(stderr, ".\n");                              \
+        fprintf(stderr, "@ %s:%d\n", __FILE__, __LINE__);    \
+        abort();                                             \
+    } while(0)
 
 #endif

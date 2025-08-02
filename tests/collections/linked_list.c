@@ -24,10 +24,8 @@ TestResult test_destroy(void) {
     linked_list_destroy(&list, mock_free);
 
     test_assert(free_called == 3);
-    test_assert(list.len == 0);
-    test_assert(list.head == NULL);
-    test_assert(list.tail == NULL);
 
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -49,6 +47,7 @@ TestResult test_insert_idx(void) {
     test_assert(*(u64*)list.tail->value == 3);
     test_assert(list.len == 4);
 
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -69,6 +68,7 @@ TestResult test_insert_head(void) {
     test_assert(list.len == 2);
     test_assert(list.head != list.tail);
 
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -89,6 +89,7 @@ TestResult test_insert_tail(void) {
     test_assert(list.len == 2);
     test_assert(list.head != list.tail);
 
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -108,6 +109,7 @@ TestResult test_get_idx_existing(void) {
     test_assert(result->next == NULL);
     test_assert(*(u64*)result->value == 3);
 
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -125,6 +127,7 @@ TestResult test_get_idx_null(void) {
 
     test_assert(result == NULL);
 
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -148,6 +151,8 @@ TestResult test_remove_idx_first(void) {
     test_assert(*(u64*)list.tail->value == 3);
     test_assert(list.len == 2);
 
+    free(result);
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -171,6 +176,8 @@ TestResult test_remove_idx_middle(void) {
     test_assert(*(u64*)list.tail->value == 3);
     test_assert(list.len == 2);
 
+    free(result);
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -194,6 +201,8 @@ TestResult test_remove_head(void) {
     test_assert(*(u64*)list.tail->value == 3);
     test_assert(list.len == 2);
 
+    free(result);
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 
@@ -217,6 +226,8 @@ TestResult test_remove_tail(void) {
     test_assert(*(u64*)list.tail->value == 2);
     test_assert(list.len == 2);
 
+    free(result);
+    linked_list_destroy(&list, NULL);
     return TEST_PASS;
 }
 

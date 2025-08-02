@@ -156,3 +156,23 @@ LinkedListItem* linked_list_remove_tail(LinkedList* list) {
 
     return item;
 }
+
+LinkedListIter linked_list_iter_create(LinkedList* list) {
+    LinkedListIter iter = {
+        .list   = list,
+        .cursor = 0,
+    };
+    return iter;
+}
+
+void* linked_list_iter_peek(LinkedListIter* iter) {
+    if(iter->cursor >= iter->list->len) return NULL;
+    return linked_list_get_idx(iter->list, iter->cursor);
+}
+
+void* linked_list_iter_next(LinkedListIter* iter) {
+    if(iter->cursor >= iter->list->len) return NULL;
+    u64 pos = iter->cursor;
+    iter->cursor++;
+    return linked_list_get_idx(iter->list, pos);
+}

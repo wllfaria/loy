@@ -119,6 +119,7 @@ pub fn build(b: *std.Build) !void {
     const loy = try buildCompiler(b, compiler_flags, target, optimize, allocator);
     const tests = try buildTests(b, compiler_flags, target, optimize, allocator);
     b.installArtifact(loy);
+    b.installArtifact(tests);
 
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(loy);
