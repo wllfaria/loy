@@ -2,7 +2,7 @@
 #include "hash_map.h"
 #include "../../src/collections/hash_map.h"
 
-TestResult test_initialize(void) {
+TestResult test_hash_map_initialization(void) {
     HashMap hash_map = hash_map_create();
     hash_map_insert(&hash_map, "first", 5, "first");
 
@@ -13,7 +13,7 @@ TestResult test_initialize(void) {
     return TEST_PASS;
 }
 
-TestResult test_growth(void) {
+TestResult test_hash_map_growth(void) {
     HashMap hash_map = hash_map_create();
     test_assert(hash_map.bucket_count == 0); // assert no allocations without a insert
 
@@ -50,8 +50,14 @@ TestResult test_growth(void) {
 }
 
 TestCase hash_map_test_cases[] = {
-    { .name = "test_initialize", .subject = test_initialize },
-    { .name = "test_growth",     .subject = test_growth     },
+    {
+        .name    = "test_hash_map_initialization",
+        .subject = test_hash_map_initialization,
+    },
+    {
+        .name    = "test_hash_map_growth",
+        .subject = test_hash_map_growth,
+    },
 };
 
 TestSuite const hash_map_test_suite = {

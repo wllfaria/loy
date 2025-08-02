@@ -1,4 +1,5 @@
 #include "collections/hash_map.h"
+#include "collections/vector.h"
 #include "test_runner.h"
 #include "collections/linked_list.h"
 
@@ -6,6 +7,7 @@ int main(void) {
     TestSuite suites[] = {
         linked_list_test_suite,
         hash_map_test_suite,
+        vector_test_suite,
     };
 
     TestConfig config = {

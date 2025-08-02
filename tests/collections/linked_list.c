@@ -232,19 +232,46 @@ TestResult test_remove_tail(void) {
 }
 
 TestCase linked_list_test_cases[] = {
-    { .name = "test_destroy",           .subject = test_destroy           },
-
-    { .name = "test_insert_idx",        .subject = test_insert_idx        },
-    { .name = "test_insert_head",       .subject = test_insert_head       },
-    { .name = "test_insert_tail",       .subject = test_insert_tail       },
-
-    { .name = "test_get_idx_existing",  .subject = test_get_idx_existing  },
-    { .name = "test_get_idx_null",      .subject = test_get_idx_null      },
-
-    { .name = "test_remove_idx_first",  .subject = test_remove_idx_first  },
-    { .name = "test_remove_idx_middle", .subject = test_remove_idx_middle },
-    { .name = "test_remove_head",       .subject = test_remove_head       },
-    { .name = "test_remove_tail",       .subject = test_remove_tail       },
+    {
+        .name    = "test_linked_list_destroy",
+        .subject = test_destroy
+    },
+    {
+        .name    = "test_linked_list_insert_idx",
+        .subject = test_insert_idx
+    },
+    {
+        .name    = "test_linked_list_insert_head",
+        .subject = test_insert_head
+    },
+    {
+        .name    = "test_linked_list_insert_tail",
+        .subject = test_insert_tail
+    },
+    {
+        .name    = "test_linked_list_get_idx_existing",
+        .subject = test_get_idx_existing
+    },
+    {
+        .name    = "test_linked_list_get_idx_null",
+        .subject = test_get_idx_null
+    },
+    {
+        .name    = "test_linked_list_remove_idx_first",
+        .subject = test_remove_idx_first
+    },
+    {
+        .name    = "test_linked_list_remove_idx_middle",
+        .subject = test_remove_idx_middle
+    },
+    {
+        .name    = "test_linked_list_remove_head",
+        .subject = test_remove_head
+    },
+    {
+        .name    = "test_linked_list_remove_tail",
+        .subject = test_remove_tail
+    },
 };
 
 TestSuite const linked_list_test_suite = {
