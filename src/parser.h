@@ -11,6 +11,7 @@ typedef enum {
     AST_NODE_FUN_ARG,
     AST_NODE_LET_BINDING,
     AST_NODE_BINARY_OP,
+    AST_NODE_TYPE_ANNOTATION,
 
     AST_NODE_FUN_CALL,
     AST_NODE_INT_LITERAL,
@@ -30,24 +31,29 @@ typedef struct {
 } AstIdentNode;
 
 typedef struct {
-    AstNodeTag tag;
-    AstNode*   name;
-    AstNode*   type;
-    AstNode*   value;
+    AstNodeTag    tag;
+    AstIdentNode* name;
+} AstTypeNode;
+
+typedef struct {
+    AstNodeTag    tag;
+    AstIdentNode* name;
+    AstTypeNode*  type;
+    AstNode*      value;
 } AstLetNode;
 
 typedef struct {
-    AstNodeTag tag;
-    AstNode*   name;
-    AstNode*   type;
+    AstNodeTag    tag;
+    AstIdentNode* ident;
+    AstTypeNode*  type;
 } AstFunArgNode;
 
 typedef struct {
-    AstNodeTag tag;
-    AstNode*   name;
-    Statements args;
-    AstNode*   return_type;
-    Statements body;
+    AstNodeTag    tag;
+    AstIdentNode* name;
+    Statements    args;
+    AstIdentNode* return_type;
+    Statements    body;
 } AstFunNode;
 
 typedef struct {

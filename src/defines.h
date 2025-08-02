@@ -24,6 +24,8 @@ typedef void (*FreeFn)(void*);
 #define LOY_MAX(a, b) (a > b ? a : b)
 #define LOY_MIN(a, b) (a < b ? a : b)
 
+#define ARRAY_LEN(arr) sizeof(arr) / sizeof(arr[0])
+
 #define PP_SPACES 4
 
 #if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
