@@ -2,6 +2,7 @@
 #include "../defines.h"
 #include "../string/string_builder.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -29,7 +30,7 @@ inline static void vector_grow_amortized(
     u64 min_cap = LOY_MAX(vec->cap * 2, required_cap);
     min_cap = LOY_MAX(vector_min_cap_for_size(t_size), min_cap);
 
-    void* new_buf = malloc(t_size * min_cap);
+    void* new_buf = malloc_bail(t_size * min_cap);
     memcpy(new_buf, vec->buf, vec->len * t_size);
     free(vec->buf);
     vec->buf = new_buf;
@@ -40,13 +41,13 @@ static void vector_resize_inner(Vector* vec, u64 additional, u64 t_size) {
     // Edge case of initializing a vector for the first time
     if(vec->len == 0 && vec->cap == 0 && vec->buf == NULL) {
         vec->cap = vector_min_cap_for_size(t_size);
-        vec->buf = malloc(t_size * vec->cap);
+        vec->buf = malloc_bail(t_size * vec->cap);
         return;
     }
 
     // Edge case when the vector was initialized with a fixed capacity
     if(vec->len == 0 && vec->fixed_cap && vec->buf == NULL) {
-        vec->buf = malloc(t_size * vec->cap);
+        vec->buf = malloc_bail(t_size * vec->cap);
         return;
     }
 
@@ -62,11 +63,7 @@ static void vector_resize_inner(Vector* vec, u64 additional, u64 t_size) {
 }
 
 static void vector_push_inner(Vector* vec, void* item, u64 t_size) {
-    // Ensuring vector is a valid pointer
-    if(vec == NULL) {
-        printf("null pointer vec passed to vector_push");
-        exit(EXIT_SUCCESS);
-    }
+    assert(vec != NULL);
 
     // Ensuring `item` is a valid pointer
     if(item == NULL) {
@@ -81,9 +78,8 @@ static void vector_push_inner(Vector* vec, void* item, u64 t_size) {
         exit(EXIT_SUCCESS);
     }
 
-    if(vec->t_size == 0) {
-        vec->t_size = t_size;
-    }
+    if(vec->t_size == 0) vec->t_size = t_size;
+    if(!vec->is_initialized) vec->is_initialized = true;
 
     vector_resize_inner(vec, 1, t_size);
     memcpy((u8*)vec->buf + vec->len * vec->t_size, item, vec->t_size);
@@ -96,24 +92,22 @@ void __vec_push(Vector* vec, void* item, u64 item_size) {
 
 Vector vector_create(void) {
     Vector vec = {
-        .buf       = NULL,
-        .len       = 0,
-        .cap       = 0,
-        .t_size    = 0,
-        .fixed_cap = false,
+        .buf            = NULL,
+        .len            = 0,
+        .cap            = 0,
+        .t_size         = 0,
+        .fixed_cap      = false,
+        .is_ptr         = false,
+        .is_initialized = false,
     };
 
     return vec;
 }
 
 Vector vector_create_with_capacity(u64 capacity) {
-    Vector vec = {
-        .buf       = NULL,
-        .len       = 0,
-        .cap       = capacity,
-        .t_size    = 0,
-        .fixed_cap = true,
-    };
+    Vector vec = vector_create();
+    vec.fixed_cap = true;
+    vec.cap = capacity;
     return vec;
 }
 
@@ -132,7 +126,15 @@ void vector_destroy(Vector* vec, FreeFn free_fn) {
 }
 
 void* vector_get(Vector* vec, u64 idx) {
-    return (char*)vec->buf + idx * vec->t_size;
+    if(idx >= vec->len) return NULL;
+    void* item = (u8*)vec->buf + idx * vec->t_size;
+    if(vec->is_ptr) return *(void**)item;
+    return item;
+}
+
+void* vector_get_last(Vector* vec) {
+    if(vec->len == 0) return NULL;
+    return vector_get(vec, vec->len - 1);
 }
 
 void vector_inspect(Vector* vec, FmtFn fmt_fn) {
@@ -144,11 +146,8 @@ void vector_inspect(Vector* vec, FmtFn fmt_fn) {
     string_builder_write_string(&builder, "    buf: [\n");
 
     for(u64 i = 0; i < vec->len; i++) {
-        void* raw        = vector_get(vec, i);
-        bool  is_pointer = vec->t_size == sizeof(void*);
-        void* item       = is_pointer ? *(void**)raw : raw;
-
-        char* formatted_item = fmt_fn(item, 2);
+        void* raw = vector_get(vec, i);
+        char* formatted_item = fmt_fn(raw, 2);
         string_builder_write_string(&builder, formatted_item);
         string_builder_write_string(&builder, i < vec->len - 1 ? ",\n" : "\n");
         free(formatted_item);

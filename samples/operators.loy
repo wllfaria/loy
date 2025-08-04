@@ -1,5 +1,7 @@
-fun other(argA: usize argB: i32) -> usize {
-    let int: i32 = 1099511627776;
-    let float: f32 = 3.14;
-    let call: u8 = fun_call(int, float);
+fun one(pi: f32, distance: i32) -> u8 { }
+
+fun other(argA: usize, argB: i32) -> usize {
+    let pi: f32 = 3.1415;
+    let distance: i32 = -2147483648;
+    let call: u8 = one(pi, distance);
 }

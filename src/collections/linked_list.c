@@ -35,7 +35,7 @@ LinkedListItem* linked_list_insert_idx(LinkedList* list, u64 idx, void* value) {
         curr = curr->next;
     }
 
-    LinkedListItem* item = malloc(sizeof(LinkedListItem));
+    LinkedListItem* item = malloc_bail(sizeof(LinkedListItem));
     item->next  = curr->next;
     item->value = value;
     curr->next  = item;
@@ -46,7 +46,7 @@ LinkedListItem* linked_list_insert_idx(LinkedList* list, u64 idx, void* value) {
 LinkedListItem* linked_list_insert_head(LinkedList* list, void* value) {
     assert(list != NULL);
 
-    LinkedListItem* item = malloc(sizeof(LinkedListItem));
+    LinkedListItem* item = malloc_bail(sizeof(LinkedListItem));
     item->value = value;
 
     if(list->len > 0) item->next = list->head;
@@ -65,11 +65,11 @@ LinkedListItem* linked_list_insert_tail(LinkedList* list, void* value) {
 
     if(list->len == 0) return linked_list_insert_head(list, value);
 
-    LinkedListItem* item = malloc(sizeof(LinkedListItem));
-    item->next       = NULL;
-    item->value      = value;
+    LinkedListItem* item = malloc_bail(sizeof(LinkedListItem));
+    item->next  = NULL;
+    item->value = value;
     list->tail->next = item;
-    list->tail       = item;
+    list->tail = item;
     list->len++;
     return item;
 }
@@ -157,7 +157,7 @@ LinkedListItem* linked_list_remove_tail(LinkedList* list) {
     return item;
 }
 
-LinkedListIter linked_list_iter_create(LinkedList* list) {
+LinkedListIter linked_list_iter(LinkedList* list) {
     LinkedListIter iter = {
         .list   = list,
         .cursor = 0,
@@ -165,12 +165,12 @@ LinkedListIter linked_list_iter_create(LinkedList* list) {
     return iter;
 }
 
-void* linked_list_iter_peek(LinkedListIter* iter) {
+void* linked_list_peek(LinkedListIter* iter) {
     if(iter->cursor >= iter->list->len) return NULL;
     return linked_list_get_idx(iter->list, iter->cursor);
 }
 
-void* linked_list_iter_next(LinkedListIter* iter) {
+void* linked_list_next(LinkedListIter* iter) {
     if(iter->cursor >= iter->list->len) return NULL;
     u64 pos = iter->cursor;
     iter->cursor++;

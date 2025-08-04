@@ -23,4 +23,7 @@ void hash_map_destroy(HashMap* hash_map, FreeFn free_fn);
 void* hash_map_get(HashMap* hash_map, void* key, u64 key_len);
 void hash_map_insert(HashMap* hash_map, void* key, u64 key_len, void* value);
 
+typedef char* (*EntryFmt)(HashMapEntry*, u64);
+void hash_map_inspect(HashMap* hash_map, EntryFmt entry_fmt);
+
 #endif

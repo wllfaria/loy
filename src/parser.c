@@ -36,13 +36,17 @@ Token* token_stream_peek_non_eof(VectorIter* iter, const char* expected) {
     return peeked;
 }
 
+static void parser_parse_optional_comma(VectorIter* iter) {
+    Token* token = token_stream_peek_non_eof(iter, ",");
+    if(token->kind == TOKEN_COMMA) vector_iter_next(iter);
+}
+
 static Token* assert_token_kind(
     VectorIter* iter,
     TokenKind expected,
     char* fmt
 ) {
     Token* needle = (Token*)vector_iter_next(iter);
-
     if(needle == NULL) {
         printf("Invalid token, expected `%s` but found `EOF`\n", fmt);
         exit(EXIT_SUCCESS);
@@ -50,8 +54,11 @@ static Token* assert_token_kind(
 
     if(needle->kind != expected) {
         char* formatted_token = lexer_fmt_token(needle, 0);
-        printf("Invalid token, expected `%s` but found:\n%s\n", fmt,
-               formatted_token);
+        printf(
+            "Invalid token, expected `%s` but found:\n%s\n",
+            fmt,
+            formatted_token
+        );
         free(formatted_token);
         exit(EXIT_SUCCESS);
     }
@@ -61,37 +68,30 @@ static Token* assert_token_kind(
 
 static AstIdentNode* parser_parse_identifier(VectorIter* iter) {
     Token* identifier = assert_token_kind(iter, TOKEN_IDENT, "identifier");
-
-    AstIdentNode* node = malloc(sizeof(AstIdentNode));
-
-    if(node == NULL) {
-        perror("Failed to allocate memory for AstIdentNode");
-        exit(EXIT_FAILURE);
-    }
-
+    AstIdentNode* node = malloc_bail(sizeof(AstIdentNode));
     node->tag.kind = AST_NODE_IDENTIFIER;
-    node->name     = identifier->lexeme;
+    node->name = identifier->lexeme;
     return node;
 }
 
 static AstTypeNode* parser_parse_type_annotation(VectorIter* iter) {
     assert_token_kind(iter, TOKEN_COLON, ":");
-    AstIdentNode* ident      = parser_parse_identifier(iter);
-    AstTypeNode*  annotation = malloc(sizeof(AstTypeNode));
+    AstIdentNode* ident = parser_parse_identifier(iter);
+    AstTypeNode*  annotation = malloc_bail(sizeof(AstTypeNode));
     annotation->tag.kind = AST_NODE_TYPE_ANNOTATION;
-    annotation->name     = ident;
+    annotation->ident = ident;
     return annotation;
 }
 
-static AstNode* parser_parse_function_arg(VectorIter* iter) {
-    AstIdentNode*  name = parser_parse_identifier(iter);
-    AstTypeNode*   type = parser_parse_type_annotation(iter);
-    AstFunArgNode* node = malloc(sizeof(AstFunArgNode));
-
-    node->type     = type;
-    node->ident    = name;
+static AstFunArgNode* parser_parse_function_arg(VectorIter* iter) {
+    AstIdentNode* name = parser_parse_identifier(iter);
+    AstTypeNode*  type = parser_parse_type_annotation(iter);
+    parser_parse_optional_comma(iter);
+    AstFunArgNode* node = malloc_bail(sizeof(AstFunArgNode));
+    node->type = type;
+    node->ident = name;
     node->tag.kind = AST_NODE_FUN_ARG;
-    return (AstNode*)node;
+    return node;
 }
 
 // TODO(wiru): remove underscores from numbers
@@ -100,25 +100,24 @@ static AstNode* parser_parse_number_literal(VectorIter* iter) {
 
     if(token->kind == TOKEN_INT) {
         if(token->is_signed) {
-            i64 value        = strtoll(token->lexeme, NULL, 10);
-            AstIntNode* expr = malloc(sizeof(AstIntNode));
+            i64 value = strtoll(token->lexeme, NULL, 10);
+            AstIntNode* expr = malloc_bail(sizeof(AstIntNode));
             expr->tag.kind = AST_NODE_INT_LITERAL;
-            expr->value    = value;
+            expr->value = value;
             return (AstNode*)expr;
         }
 
-        u64 value         = strtoull(token->lexeme, NULL, 10);
-        AstUintNode* expr = malloc(sizeof(AstUintNode));
+        u64 value = strtoull(token->lexeme, NULL, 10);
+        AstUintNode* expr = malloc_bail(sizeof(AstUintNode));
         expr->tag.kind = AST_NODE_UINT_LITERAL;
-        expr->value    = value;
+        expr->value = value;
         return (AstNode*)expr;
     }
 
     if(token->kind == TOKEN_FLOAT) {
-        f64 value          = strtod(token->lexeme, NULL);
-        AstFloatNode* expr = malloc(sizeof(AstFloatNode));
+        AstFloatNode* expr = malloc_bail(sizeof(AstFloatNode));
         expr->tag.kind = AST_NODE_FLOAT_LITERAL;
-        expr->value    = value;
+        expr->value = token->lexeme;
         return (AstNode*)expr;
     }
 
@@ -163,9 +162,7 @@ static Statements parser_parse_function_call(VectorIter* iter) {
     while(peeked != NULL && peeked->kind != TOKEN_RPAREN) {
         AstNode* arg = parser_parse_with_precedence(iter, BASE_PRECEDENCE);
         vector_push_ptr(&args, arg);
-        Token* token = token_stream_peek_non_eof(iter, ",");
-        // consume optional comma
-        if(token->kind == TOKEN_COMMA) vector_iter_next(iter);
+        parser_parse_optional_comma(iter);
         peeked = vector_iter_peek(iter);
     }
 
@@ -220,10 +217,10 @@ static AstNode* parser_parse_with_precedence(
             assert_token_kind(iter, TOKEN_LPAREN, "(");
             Statements call_args = parser_parse_function_call(iter);
             assert_token_kind(iter, TOKEN_RPAREN, ")");
-            AstFunCallNode* call = malloc(sizeof(AstFunCallNode));
+            AstFunCallNode* call = malloc_bail(sizeof(AstFunCallNode));
             call->tag.kind = AST_NODE_FUN_CALL;
-            call->args     = call_args;
-            call->name     = lhs;
+            call->args = call_args;
+            call->ident = (AstIdentNode*)lhs;
             return (AstNode*)call;
         }
         default: break;
@@ -236,11 +233,11 @@ static AstNode* parser_parse_with_precedence(
 
         AstNode* rhs = parser_parse_with_precedence(iter,
                                                     op_precedence);
-        AstBinaryOpNode* binop = malloc(sizeof(AstBinaryOpNode));
+        AstBinaryOpNode* binop = malloc_bail(sizeof(AstBinaryOpNode));
         binop->tag.kind = AST_NODE_BINARY_OP;
-        binop->lhs      = lhs;
-        binop->rhs      = rhs;
-        lhs             = (AstNode*)binop;
+        binop->lhs = lhs;
+        binop->rhs = rhs;
+        lhs = (AstNode*)binop;
     }
 
     return lhs;
@@ -258,17 +255,17 @@ static AstNode* parser_parse_let_binding(VectorIter* iter) {
     AstNode* value = parser_parse_expression(iter);
     assert_token_kind(iter, TOKEN_SEMI, ";");
 
-    AstLetNode* node = malloc(sizeof(AstLetNode));
-    node->name     = name;
-    node->type     = type;
+    AstLetNode* node = malloc_bail(sizeof(AstLetNode));
+    node->ident = name;
+    node->type = type;
     node->tag.kind = AST_NODE_LET_BINDING;
-    node->value    = value;
+    node->value = value;
     return (AstNode*)node;
 }
 
 static Statements parser_parse_block(VectorIter* iter) {
     Token* peeked = (Token*)vector_iter_peek(iter);
-    Vector block  = vector_create();
+    Vector block = vector_create();
 
     while(peeked != NULL && peeked->kind != TOKEN_RBRACE) {
         switch(peeked->kind) {
@@ -310,7 +307,7 @@ static AstFunNode* parser_parse_function(VectorIter* iter) {
 
     Token* peeked = vector_iter_peek(iter);
     while(peeked != NULL && peeked->kind != TOKEN_RPAREN) {
-        AstNode* arg = parser_parse_function_arg(iter);
+        AstFunArgNode* arg = parser_parse_function_arg(iter);
         vector_push_ptr(&args, arg);
         peeked = vector_iter_peek(iter);
     }
@@ -324,18 +321,18 @@ static AstFunNode* parser_parse_function(VectorIter* iter) {
     Statements block = parser_parse_block(iter);
     assert_token_kind(iter, TOKEN_RBRACE, "}");
 
-    AstFunNode* function = malloc(sizeof(AstFunNode));
-    function->tag.kind    = AST_NODE_FUN;
-    function->name        = (AstIdentNode*)identifier;
-    function->args        = args;
+    AstFunNode* function = malloc_bail(sizeof(AstFunNode));
+    function->tag.kind = AST_NODE_FUN;
+    function->ident = (AstIdentNode*)identifier;
+    function->args = args;
     function->return_type = return_type;
-    function->body        = block;
+    function->body = block;
 
     return function;
 }
 
 Ast parser_parse_token_stream(TokenStream* stream) {
-    Ast ast         = { .statements = vector_create() };
+    Ast ast = { .statements = vector_create() };
     VectorIter iter = vector_iter(&stream->tokens);
 
     while(vector_iter_peek(&iter) != NULL) {
@@ -345,7 +342,7 @@ Ast parser_parse_token_stream(TokenStream* stream) {
         case TOKEN_FUN: {
             AstNode* function = (AstNode*)parser_parse_function(&iter);
             vector_push_ptr(&ast.statements, function);
-            return ast;
+            break;
         }
 
         case TOKEN_EQUAL:
@@ -380,7 +377,7 @@ static void parser_destroy_node(AstNode* node) {
     }
     case AST_NODE_FUN: {
         AstFunNode* function = (AstFunNode*)node;
-        parser_destroy_node((AstNode*)function->name);
+        parser_destroy_node((AstNode*)function->ident);
         parser_destroy_node((AstNode*)function->return_type);
         vector_destroy(&function->args, parser_destroy_statement);
         vector_destroy(&function->body, parser_destroy_statement);
@@ -394,7 +391,7 @@ static void parser_destroy_node(AstNode* node) {
     }
     case AST_NODE_LET_BINDING: {
         AstLetNode* binding = (AstLetNode*)node;
-        parser_destroy_node((AstNode*)binding->name);
+        parser_destroy_node((AstNode*)binding->ident);
         parser_destroy_node((AstNode*)binding->type);
         parser_destroy_node(binding->value);
         break;
@@ -407,12 +404,15 @@ static void parser_destroy_node(AstNode* node) {
         break;
     case AST_NODE_FUN_CALL: {
         AstFunCallNode* binding = (AstFunCallNode*)node;
-        parser_destroy_node(binding->name);
+        parser_destroy_node((AstNode*)binding->ident);
         vector_destroy(&binding->args, parser_destroy_statement);
         break;
     }
-    case AST_NODE_TYPE_ANNOTATION:
+    case AST_NODE_TYPE_ANNOTATION: {
+        AstTypeNode* type = (AstTypeNode*)node;
+        parser_destroy_node((AstNode*)type->ident);
         break;
+    }
     }
     free(node);
 }
@@ -427,7 +427,7 @@ void parser_destroy(Ast* ast) {
 }
 
 char* parser_fmt_node(void* item, u64 indentation) {
-    AstNode* node         = (AstNode*)item;
+    AstNode* node = (AstNode*)item;
     StringBuilder builder = string_builder_create();
 
     switch(node->kind) {
@@ -438,8 +438,8 @@ char* parser_fmt_node(void* item, u64 indentation) {
     }
     case AST_NODE_FUN_ARG: {
         AstFunArgNode* arg = (AstFunArgNode*)node;
-        char* name         = parser_fmt_node(arg->ident, indentation);
-        char* type         = parser_fmt_node(arg->type, indentation);
+        char* name = parser_fmt_node(arg->ident, indentation);
+        char* type = parser_fmt_node(arg->type, indentation);
 
         string_builder_write_format(&builder, "%s: %s", name, type);
         free(name);
@@ -451,28 +451,31 @@ char* parser_fmt_node(void* item, u64 indentation) {
         string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, "AstFunNode{\n");
 
-        char* name        = parser_fmt_node(function->name, 0);
+        char* name = parser_fmt_node(function->ident, 0);
         char* return_type = parser_fmt_node(function->return_type, 0);
 
-        string_builder_indent(&builder, indentation + 1);
+        indentation++;
+        string_builder_indent(&builder, indentation);
         string_builder_write_format(&builder, ".name = \"%s\",\n", name);
-        string_builder_indent(&builder, indentation + 1);
+        string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, ".return type = ");
         string_builder_write_format(&builder, "\"%s\"\n", return_type);
-        string_builder_indent(&builder, indentation + 1);
-        string_builder_write_string(&builder, ".args = [\n");
+        string_builder_indent(&builder, indentation);
+        string_builder_write_string(&builder, ".args = [");
+        if(function->args.len > 0) string_builder_write_string(&builder, "\n");
 
         free(name);
         free(return_type);
 
         u8 pos = 0;
         VectorIter args_iter = vector_iter(&function->args);
+        indentation++;
         while(vector_iter_peek(&args_iter) != NULL) {
-            AstFunArgNode* node = *(void**)vector_iter_next(&args_iter);
-            char* name          = parser_fmt_node(node->ident, 0);
-            char* type          = parser_fmt_node(node->type, 0);
+            AstFunArgNode* node = (AstFunArgNode*)vector_iter_next(&args_iter);
+            char* name = parser_fmt_node(node->ident, 0);
+            char* type = parser_fmt_node(node->type, 0);
 
-            string_builder_indent(&builder, indentation + 2);
+            string_builder_indent(&builder, indentation);
             string_builder_write_format(&builder, "(%u) ", pos);
             string_builder_write_format(&builder, "%s: \"%s\"", type, name);
             string_builder_write_string(&builder, ",\n");
@@ -481,24 +484,29 @@ char* parser_fmt_node(void* item, u64 indentation) {
             free(name);
             free(type);
         }
+        indentation--;
 
-        string_builder_indent(&builder, indentation + 1);
+        if(function->args.len > 0) string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, "],\n");
-        string_builder_indent(&builder, indentation + 1);
-        string_builder_write_string(&builder, ".body = [\n");
+        string_builder_indent(&builder, indentation);
+        string_builder_write_string(&builder, ".body = [");
+        if(function->body.len > 0) string_builder_write_string(&builder, "\n");
 
         VectorIter body_iter = vector_iter(&function->body);
+        indentation++;
         while(vector_iter_peek(&body_iter) != NULL) {
-            AstNode* node        = *(void**)vector_iter_next(&body_iter);
-            char* formatted_node = parser_fmt_node(node, indentation + 2);
+            AstNode* node = (AstNode*)vector_iter_next(&body_iter);
+            char* formatted_node = parser_fmt_node(node, indentation);
             string_builder_write_string(&builder, formatted_node);
             string_builder_write_string(&builder, "\n");
 
             free(formatted_node);
         }
+        indentation--;
 
-        string_builder_indent(&builder, indentation + 1);
+        if(function->body.len > 0) string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, "],\n");
+        indentation--;
         string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, "},");
 
@@ -506,9 +514,9 @@ char* parser_fmt_node(void* item, u64 indentation) {
     }
     case AST_NODE_LET_BINDING: {
         AstLetNode* binding = (AstLetNode*)node;
-        char* name          = parser_fmt_node(binding->name, indentation);
-        char* type          = parser_fmt_node(binding->type, indentation);
-        char* value         = parser_fmt_node(binding->value, indentation);
+        char* name = parser_fmt_node(binding->ident, indentation);
+        char* type = parser_fmt_node(binding->type, indentation);
+        char* value = parser_fmt_node(binding->value, indentation);
 
         string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, "LetBinding{\n");
@@ -530,7 +538,7 @@ char* parser_fmt_node(void* item, u64 indentation) {
     }
     case AST_NODE_FLOAT_LITERAL: {
         AstFloatNode* float_expr = (AstFloatNode*)node;
-        string_builder_write_format(&builder, "%lf", float_expr->value);
+        string_builder_write_format(&builder, "%s", float_expr->value);
         break;
     }
     case AST_NODE_INT_LITERAL: {
@@ -551,7 +559,7 @@ char* parser_fmt_node(void* item, u64 indentation) {
         string_builder_write_string(&builder, "AstFunCallNode{\n");
         string_builder_indent(&builder, indentation + 2);
 
-        char* name = parser_fmt_node(fun_call->name, indentation);
+        char* name = parser_fmt_node(fun_call->ident, indentation);
         string_builder_write_format(&builder, ".name = \"%s\",\n", name);
         free(name);
 
@@ -560,7 +568,7 @@ char* parser_fmt_node(void* item, u64 indentation) {
 
         VectorIter args_iter = vector_iter(&fun_call->args);
         while(vector_iter_peek(&args_iter) != NULL) {
-            AstNode* node        = *(void**)vector_iter_next(&args_iter);
+            AstNode* node = (AstNode*)vector_iter_next(&args_iter);
             char* formatted_node = parser_fmt_node(node, indentation + 2);
             string_builder_write_format(&builder, "%s", formatted_node);
             if(args_iter.cursor < fun_call->args.len) {
@@ -573,8 +581,11 @@ char* parser_fmt_node(void* item, u64 indentation) {
         string_builder_write_string(&builder, "}");
         break;
     }
-    case AST_NODE_TYPE_ANNOTATION:
+    case AST_NODE_TYPE_ANNOTATION: {
+        AstTypeNode* type = (AstTypeNode*)node;
+        string_builder_write_format(&builder, "%s", type->ident->name);
         break;
+    }
     }
 
     return string_builder_to_string(&builder);

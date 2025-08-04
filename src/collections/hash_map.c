@@ -1,8 +1,10 @@
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "hash_map.h"
 #include "linked_list.h"
+#include "../string/string_builder.h"
 
 #define MIN_MAP_BUCKET_SIZE 16
 #define MAP_GROW_THRESHOLD  2.5
@@ -28,8 +30,8 @@ static void hash_map_initialize(HashMap* hash_map) {
     u64 bucket_count = hash_map_figure_bucket_count(hash_map);
 
     hash_map->bucket_count = bucket_count;
-    hash_map->buckets      = vector_create_with_capacity(bucket_count);
-    hash_map->len          = 0; // this is already set, but doesn't hurt
+    hash_map->buckets = vector_create_with_capacity(bucket_count);
+    hash_map->len = 0;          // this is already set, but doesn't hurt
 
     for(u8 i = 0; i < bucket_count; i++) {
         vector_push(&hash_map->buckets, linked_list_create());
@@ -46,12 +48,12 @@ static void hash_map_grow(HashMap* hash_map, u64 bucket_count) {
     for(u64 i = 0; i < hash_map->bucket_count; i++) {
         LinkedList* bucket = (LinkedList*)vector_get(&hash_map->buckets, i);
 
-        LinkedListIter iter = linked_list_iter_create(bucket);
-        while(linked_list_iter_peek(&iter) != NULL) {
+        LinkedListIter iter = linked_list_iter(bucket);
+        while(linked_list_peek(&iter) != NULL) {
             LinkedListItem* value =
-                (LinkedListItem*)linked_list_iter_next(&iter);
+                (LinkedListItem*)linked_list_next(&iter);
 
-            HashMapEntry* entry    = (HashMapEntry*)value->value;
+            HashMapEntry* entry = (HashMapEntry*)value->value;
             LinkedList* new_bucket = (LinkedList*)vector_get(
                 &new_buckets,
                 hash_map_idx_from_key_hash(bucket_count, entry->hash)
@@ -66,7 +68,7 @@ static void hash_map_grow(HashMap* hash_map, u64 bucket_count) {
     }
 
     vector_destroy(&hash_map->buckets, NULL);
-    hash_map->buckets      = new_buckets;
+    hash_map->buckets = new_buckets;
     hash_map->bucket_count = bucket_count;
 }
 
@@ -76,21 +78,21 @@ static HashMapEntry* hash_map_entry_create(
     u64 key_hash,
     void* value
 ) {
-    HashMapEntry* entry = malloc(sizeof(HashMapEntry));
+    HashMapEntry* entry = malloc_bail(sizeof(HashMapEntry));
 
     // Copy the key so we own the pointer data
-    entry->key = malloc(key_len);
-    memcpy(entry->key, key, key_len);
+    entry->key = malloc_bail(key_len);
+    memcpy(entry->key, key, key_len + 1);
     entry->key_len = key_len;
-    entry->hash    = key_hash;
-    entry->value   = value;
+    entry->hash = key_hash;
+    entry->value = value;
     return entry;
 }
 
 // FNV-1a implementation for 64 bit data
 static u64 hash_buffer(const void* buffer, u64 len) {
-    u64 hash       = 14695981039346656037ull;
-    u64 prime      = 1099511628211ull;
+    u64 hash = 14695981039346656037ull;
+    u64 prime = 1099511628211ull;
     const u8* data = (u8*)buffer;
 
     for(u64 i = 0; i < len; i++) {
@@ -112,11 +114,11 @@ HashMap hash_map_create(void) {
 
 void hash_map_destroy(HashMap* hash_map, FreeFn free_fn) {
     for(u64 i = 0; i < hash_map->bucket_count; i++) {
-        LinkedList* bucket  = (LinkedList*)vector_get(&hash_map->buckets, i);
-        LinkedListIter iter = linked_list_iter_create(bucket);
+        LinkedList* bucket = (LinkedList*)vector_get(&hash_map->buckets, i);
+        LinkedListIter iter = linked_list_iter(bucket);
 
-        while(linked_list_iter_peek(&iter) != NULL) {
-            LinkedListItem* val = (LinkedListItem*)linked_list_iter_next(&iter);
+        while(linked_list_peek(&iter) != NULL) {
+            LinkedListItem* val = (LinkedListItem*)linked_list_next(&iter);
             HashMapEntry* entry = (HashMapEntry*)val->value;
             free(entry->key);
             free(entry);
@@ -130,19 +132,19 @@ void hash_map_destroy(HashMap* hash_map, FreeFn free_fn) {
 
 void* hash_map_get(HashMap* hash_map, void* key, u64 key_len) {
     assert(hash_map != NULL);
+    if(!hash_map->buckets.is_initialized) return NULL;
     u64 key_hash = hash_buffer(key, key_len);
-
     u64 idx = hash_map_idx_from_key_hash(hash_map->bucket_count, key_hash);
 
-    LinkedList* bucket  = vector_get(&hash_map->buckets, idx);
-    LinkedListIter iter = linked_list_iter_create(bucket);
-    while(linked_list_iter_peek(&iter) != NULL) {
-        LinkedListItem* item = linked_list_iter_next(&iter);
-        HashMapEntry* entry  = (HashMapEntry*)item->value;
+    LinkedList* bucket = vector_get(&hash_map->buckets, idx);
+    LinkedListIter iter = linked_list_iter(bucket);
+    while(linked_list_peek(&iter) != NULL) {
+        LinkedListItem* item = linked_list_next(&iter);
+        HashMapEntry* entry = (HashMapEntry*)item->value;
 
         // check hash value and length before memcmp as those are less expensive
         bool has_same_hash = entry->hash == key_hash;
-        bool has_same_len  = entry->key_len == key_len;
+        bool has_same_len = entry->key_len == key_len;
         if(
             has_same_hash &&
             has_same_len &&
@@ -160,9 +162,9 @@ void hash_map_insert(HashMap* hash_map, void* key, u64 key_len, void* value) {
     if(hash_map->bucket_count == 0) hash_map_initialize(hash_map);
 
     u64 key_hash = hash_buffer(key, key_len);
-    u64 idx      = hash_map_idx_from_key_hash(hash_map->bucket_count, key_hash);
+    u64 idx = hash_map_idx_from_key_hash(hash_map->bucket_count, key_hash);
 
-    LinkedList* bucket  = (LinkedList*)vector_get(&hash_map->buckets, idx);
+    LinkedList* bucket = (LinkedList*)vector_get(&hash_map->buckets, idx);
     HashMapEntry* entry = hash_map_entry_create(key, key_len, key_hash, value);
 
     linked_list_insert_tail(bucket, entry);
@@ -172,4 +174,29 @@ void hash_map_insert(HashMap* hash_map, void* key, u64 key_len, void* value) {
     if(min_bucket_count > hash_map->bucket_count) {
         hash_map_grow(hash_map, min_bucket_count);
     }
+}
+
+void hash_map_inspect(HashMap* hash_map, EntryFmt entry_fmt) {
+    assert(hash_map != NULL);
+    StringBuilder builder = string_builder_create();
+
+    string_builder_write_string(&builder, "HashMap{\n");
+
+    for(u64 i = 0; i < hash_map->bucket_count; i++) {
+        LinkedList* bucket = vector_get(&hash_map->buckets, i);
+        LinkedListIter iter = linked_list_iter(bucket);
+
+        while(linked_list_peek(&iter) != NULL) {
+            LinkedListItem* val = (LinkedListItem*)linked_list_next(&iter);
+            HashMapEntry* entry = (HashMapEntry*)val->value;
+            char* formatted_entry = entry_fmt(entry, 1);
+            string_builder_indent(&builder, 1);
+            string_builder_write_string(&builder, formatted_entry);
+            string_builder_write_string(&builder, ",\n");
+            free(formatted_entry);
+        }
+    }
+    string_builder_write_string(&builder, "}\n");
+    printf("%s", string_builder_to_string(&builder));
+    string_builder_destroy(&builder);
 }

@@ -21,6 +21,8 @@ typedef double f64;
 
 typedef void (*FreeFn)(void*);
 
+void* malloc_bail(u64 node_size);
+
 #define LOY_MAX(a, b) (a > b ? a : b)
 #define LOY_MIN(a, b) (a < b ? a : b)
 

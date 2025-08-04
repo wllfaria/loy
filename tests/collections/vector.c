@@ -32,7 +32,7 @@ TestResult test_vector_growth(void) {
 }
 
 TestResult test_vec_push_ptr(void) {
-    Vector vec          = vector_create();
+    Vector vec = vector_create();
     const char* words[] = { "alpha", "beta", "gamma" };
 
     for(u64 i = 0; i < 3; i++) {
@@ -84,7 +84,7 @@ TestResult test_vector_free_fn(void) {
     Vector vec = vector_create();
 
     for(int i = 0; i < 5; i++) {
-        Vector* item = malloc(sizeof(Vector));
+        Vector* item = malloc_bail(sizeof(Vector));
         vector_push_ptr(&vec, item);
     }
 
@@ -110,27 +110,27 @@ TestResult test_vector_push_and_get(void) {
 
 TestCase vector_test_cases[] = {
     {
-        .name    = "test_vector_initialization",
+        .name = "test_vector_initialization",
         .subject = test_vector_initialization
     },
     {
-        .name    = "test_vector_growth",
+        .name = "test_vector_growth",
         .subject = test_vector_growth
     },
     {
-        .name    = "test_vec_push_ptr",
+        .name = "test_vec_push_ptr",
         .subject = test_vec_push_ptr
     },
     {
-        .name    = "test_vector_iterator",
+        .name = "test_vector_iterator",
         .subject = test_vector_iterator
     },
     {
-        .name    = "test_vector_free_fn",
+        .name = "test_vector_free_fn",
         .subject = test_vector_free_fn
     },
     {
-        .name    = "test_vector_push_and_get",
+        .name = "test_vector_push_and_get",
         .subject = test_vector_push_and_get
     },
 };

@@ -3,6 +3,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "string/string_slice.h"
+#include "typer.h"
 
 StringSlice read_file(const char* path) {
     FILE* file = fopen(path, "r");
@@ -17,7 +18,7 @@ StringSlice read_file(const char* path) {
     rewind(file);
 
     // Allocate memory for content + null terminator
-    char* buffer = malloc(length + 1);
+    char* buffer = malloc_bail(length + 1);
     if(!buffer) {
         perror("failed to read file");
         fclose(file);
@@ -35,10 +36,13 @@ int main(void) {
     StringSlice file = read_file("samples/operators.loy");
     TokenStream stream = lexer_tokenize_file(file);
     Ast ast = parser_parse_token_stream(&stream);
-    vector_inspect(&ast.statements, parser_fmt_node);
 
-    lexer_destroy(&stream);
-    parser_destroy(&ast);
-    free(file.ptr);
+    // vector_inspect(&ast.statements, parser_fmt_node);
+
+    typer_typecheck_ast(ast);
+
+    // lexer_destroy(&stream);
+    // parser_destroy(&ast);
+    // free(file.ptr);
     return 0;
 }

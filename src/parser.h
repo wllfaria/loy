@@ -32,12 +32,12 @@ typedef struct {
 
 typedef struct {
     AstNodeTag    tag;
-    AstIdentNode* name;
+    AstIdentNode* ident;
 } AstTypeNode;
 
 typedef struct {
     AstNodeTag    tag;
-    AstIdentNode* name;
+    AstIdentNode* ident;
     AstTypeNode*  type;
     AstNode*      value;
 } AstLetNode;
@@ -50,16 +50,16 @@ typedef struct {
 
 typedef struct {
     AstNodeTag    tag;
-    AstIdentNode* name;
+    AstIdentNode* ident;
     Statements    args;
     AstIdentNode* return_type;
     Statements    body;
 } AstFunNode;
 
 typedef struct {
-    AstNodeTag tag;
-    AstNode*   name;
-    Statements args;
+    AstNodeTag    tag;
+    AstIdentNode* ident;
+    Statements    args;
 } AstFunCallNode;
 
 typedef struct {
@@ -74,7 +74,7 @@ typedef struct {
 
 typedef struct {
     AstNodeTag tag;
-    f64        value;
+    char*      value;
 } AstFloatNode;
 
 typedef struct {

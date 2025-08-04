@@ -52,7 +52,7 @@ void string_builder_write_format(StringBuilder* builder, const char* fmt, ...) {
     }
 
     // If not, dynamically allocate the required size
-    char* dynamic = malloc(len + 1);
+    char* dynamic = malloc_bail(len + 1);
     if(!dynamic) {
         return;
     }

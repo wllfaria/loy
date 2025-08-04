@@ -34,8 +34,8 @@ typedef struct {
     u64         cursor;
 } LinkedListIter;
 
-LinkedListIter linked_list_iter_create(LinkedList* list);
-void* linked_list_iter_peek(LinkedListIter* iter);
-void* linked_list_iter_next(LinkedListIter* iter);
+LinkedListIter linked_list_iter(LinkedList* list);
+void* linked_list_peek(LinkedListIter* iter);
+void* linked_list_next(LinkedListIter* iter);
 
 #endif
