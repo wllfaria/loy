@@ -442,68 +442,9 @@ Ast parser_parse_token_stream(
     return ast;
 }
 
-static void parser_destroy_statement(void* item);
-
-static void parser_destroy_node(AstNode* node) {
-    switch(node->kind) {
-    case AST_NODE_IDENTIFIER: {
-        break;
-    }
-    case AST_NODE_FUN: {
-        AstFunNode* function = (AstFunNode*)node;
-        parser_destroy_node((AstNode*)function->ident);
-        parser_destroy_node((AstNode*)function->return_type);
-        // vector_destroy(&function->args, parser_destroy_statement);
-        // vector_destroy(&function->body, parser_destroy_statement);
-        break;
-    }
-    case AST_NODE_FUN_ARG: {
-        AstFunArgNode* arg = (AstFunArgNode*)node;
-        // parser_destroy_node((AstNode*)arg->ident);
-        // parser_destroy_node((AstNode*)arg->type);
-        break;
-    }
-    case AST_NODE_LET_BINDING: {
-        AstLetNode* binding = (AstLetNode*)node;
-        // parser_destroy_node((AstNode*)binding->ident);
-        // parser_destroy_node((AstNode*)binding->type);
-        // parser_destroy_node(binding->value);
-        break;
-    }
-    case AST_NODE_INT_LITERAL:
-    case AST_NODE_UINT_LITERAL:
-    case AST_NODE_FLOAT_LITERAL:
-        break;
-    case AST_NODE_BINARY_OP:
-        break;
-    case AST_NODE_FUN_CALL: {
-        AstFunCallNode* binding = (AstFunCallNode*)node;
-        // parser_destroy_node((AstNode*)binding->ident);
-        // vector_destroy(&binding->args, parser_destroy_statement);
-        break;
-    }
-    case AST_NODE_TYPE_ANNOTATION: {
-        AstTypeNode* type = (AstTypeNode*)node;
-        // parser_destroy_node((AstNode*)type->ident);
-        break;
-    }
-    }
-    free(node);
-}
-
-static void parser_destroy_statement(void* item) {
-    AstNode* node = *(void**)item;
-    // parser_destroy_node(node);
-}
-
-void parser_destroy(Ast* ast) {
-    // vector_destroy(&ast->statements, parser_destroy_statement);
-}
-
-char* parser_fmt_node(void* item, u64 indentation) {
-    Allocator allocator = arena_create();
+char* parser_fmt_node(Allocator* allocator, void* item, u64 indentation) {
     AstNode* node = (AstNode*)item;
-    StringBuilder builder = string_builder_create(&allocator);
+    StringBuilder builder = string_builder_create(allocator);
 
     switch(node->kind) {
     case AST_NODE_IDENTIFIER: {
@@ -513,12 +454,10 @@ char* parser_fmt_node(void* item, u64 indentation) {
     }
     case AST_NODE_FUN_ARG: {
         AstFunArgNode* arg = (AstFunArgNode*)node;
-        char* name = parser_fmt_node(arg->ident, indentation);
-        char* type = parser_fmt_node(arg->type, indentation);
+        char* name = parser_fmt_node(allocator, arg->ident, indentation);
+        char* type = parser_fmt_node(allocator, arg->type, indentation);
 
         string_builder_write_format(&builder, "%s: %s", name, type);
-        free(name);
-        free(type);
         break;
     }
     case AST_NODE_FUN: {
@@ -526,8 +465,12 @@ char* parser_fmt_node(void* item, u64 indentation) {
         string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, "AstFunNode{\n");
 
-        char* name = parser_fmt_node(function->ident, 0);
-        char* return_type = parser_fmt_node(function->return_type, 0);
+        char* name = parser_fmt_node(allocator, function->ident, 0);
+        char* return_type = parser_fmt_node(
+            allocator,
+            function->return_type,
+            0
+        );
 
         indentation++;
         string_builder_indent(&builder, indentation);
@@ -539,16 +482,13 @@ char* parser_fmt_node(void* item, u64 indentation) {
         string_builder_write_string(&builder, ".args = [");
         if(function->args.len > 0) string_builder_write_string(&builder, "\n");
 
-        free(name);
-        free(return_type);
-
         u8 pos = 0;
         VectorIter args_iter = vector_iter(&function->args);
         indentation++;
         while(vector_iter_peek(&args_iter) != NULL) {
             AstFunArgNode* node = (AstFunArgNode*)vector_iter_next(&args_iter);
-            char* name = parser_fmt_node(node->ident, 0);
-            char* type = parser_fmt_node(node->type, 0);
+            char* name = parser_fmt_node(allocator, node->ident, 0);
+            char* type = parser_fmt_node(allocator, node->type, 0);
 
             string_builder_indent(&builder, indentation);
             string_builder_write_format(&builder, "(%u) ", pos);
@@ -556,8 +496,6 @@ char* parser_fmt_node(void* item, u64 indentation) {
             string_builder_write_string(&builder, ",\n");
 
             pos++;
-            free(name);
-            free(type);
         }
         indentation--;
 
@@ -571,11 +509,13 @@ char* parser_fmt_node(void* item, u64 indentation) {
         indentation++;
         while(vector_iter_peek(&body_iter) != NULL) {
             AstNode* node = (AstNode*)vector_iter_next(&body_iter);
-            char* formatted_node = parser_fmt_node(node, indentation);
+            char* formatted_node = parser_fmt_node(
+                allocator,
+                node,
+                indentation
+            );
             string_builder_write_string(&builder, formatted_node);
             string_builder_write_string(&builder, "\n");
-
-            free(formatted_node);
         }
         indentation--;
 
@@ -589,9 +529,9 @@ char* parser_fmt_node(void* item, u64 indentation) {
     }
     case AST_NODE_LET_BINDING: {
         AstLetNode* binding = (AstLetNode*)node;
-        char* name = parser_fmt_node(binding->ident, indentation);
-        char* type = parser_fmt_node(binding->type, indentation);
-        char* value = parser_fmt_node(binding->value, indentation);
+        char* name = parser_fmt_node(allocator, binding->ident, indentation);
+        char* type = parser_fmt_node(allocator, binding->type, indentation);
+        char* value = parser_fmt_node(allocator, binding->value, indentation);
 
         string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, "LetBinding{\n");
@@ -604,10 +544,6 @@ char* parser_fmt_node(void* item, u64 indentation) {
         string_builder_write_format(&builder, ".value = %s,\n", value);
         string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, "},");
-
-        free(name);
-        free(type);
-        free(value);
 
         break;
     }
@@ -634,9 +570,8 @@ char* parser_fmt_node(void* item, u64 indentation) {
         string_builder_write_string(&builder, "AstFunCallNode{\n");
         string_builder_indent(&builder, indentation + 2);
 
-        char* name = parser_fmt_node(fun_call->ident, indentation);
+        char* name = parser_fmt_node(allocator, fun_call->ident, indentation);
         string_builder_write_format(&builder, ".name = \"%s\",\n", name);
-        free(name);
 
         string_builder_indent(&builder, indentation + 2);
         string_builder_write_string(&builder, ".args = [");
@@ -644,12 +579,15 @@ char* parser_fmt_node(void* item, u64 indentation) {
         VectorIter args_iter = vector_iter(&fun_call->args);
         while(vector_iter_peek(&args_iter) != NULL) {
             AstNode* node = (AstNode*)vector_iter_next(&args_iter);
-            char* formatted_node = parser_fmt_node(node, indentation + 2);
+            char* formatted_node = parser_fmt_node(
+                allocator,
+                node,
+                indentation + 2
+            );
             string_builder_write_format(&builder, "%s", formatted_node);
             if(args_iter.cursor < fun_call->args.len) {
                 string_builder_write_string(&builder, ", ");
             }
-            free(formatted_node);
         }
         string_builder_write_string(&builder, "],\n");
         string_builder_indent(&builder, indentation + 1);

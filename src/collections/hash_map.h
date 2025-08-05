@@ -26,6 +26,10 @@ void* hash_map_get(HashMap* hash_map, void* key, u64 key_len);
 void hash_map_insert(HashMap* hash_map, void* key, u64 key_len, void* value);
 
 typedef char* (*EntryFmt)(Allocator*, HashMapEntry*, u64);
-void hash_map_inspect(HashMap* hash_map, EntryFmt entry_fmt);
+void hash_map_inspect(
+    Allocator* allocator,
+    HashMap* hash_map,
+    EntryFmt entry_fmt
+);
 
 #endif

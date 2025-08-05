@@ -185,10 +185,13 @@ void hash_map_insert(HashMap* hash_map, void* key, u64 key_len, void* value) {
     }
 }
 
-void hash_map_inspect(HashMap* hash_map, EntryFmt entry_fmt) {
+void hash_map_inspect(
+    Allocator* allocator,
+    HashMap* hash_map,
+    EntryFmt entry_fmt
+) {
     assert(hash_map != NULL);
-    Allocator allocator = arena_create();
-    StringBuilder builder = string_builder_create(&allocator);
+    StringBuilder builder = string_builder_create(allocator);
 
     string_builder_write_string(&builder, "HashMap{\n");
 
@@ -199,7 +202,7 @@ void hash_map_inspect(HashMap* hash_map, EntryFmt entry_fmt) {
         while(linked_list_peek(&iter) != NULL) {
             LinkedListItem* val = (LinkedListItem*)linked_list_next(&iter);
             HashMapEntry* entry = (HashMapEntry*)val->value;
-            char* formatted_entry = entry_fmt(&allocator, entry, 1);
+            char* formatted_entry = entry_fmt(allocator, entry, 1);
             string_builder_indent(&builder, 1);
             string_builder_write_string(&builder, formatted_entry);
             string_builder_write_string(&builder, ",\n");

@@ -284,35 +284,3 @@ TokenStream lexer_tokenize_file(Allocator* allocator, StringSlice file) {
     TokenStream stream = { .tokens = tokens };
     return stream;
 }
-
-static void lexer_destroy_token(void* item) {
-    Token* token = (Token*)item;
-
-    switch(token->kind) {
-    case TOKEN_EQUAL:
-    case TOKEN_COLON:
-    case TOKEN_LBRACE:
-    case TOKEN_RBRACE:
-    case TOKEN_LPAREN:
-    case TOKEN_RPAREN:
-    case TOKEN_ASSIGN_ADD:
-    case TOKEN_SEMI:
-    case TOKEN_THIN_ARROW:
-    case TOKEN_PLUS:
-    case TOKEN_PLUS_PLUS:
-    case TOKEN_COMMA:
-        break;
-    case TOKEN_IDENT:
-    case TOKEN_LET:
-    case TOKEN_FUN:
-    case TOKEN_INT:
-    case TOKEN_FLOAT:
-        // free((char*)token->lexeme);
-        break;
-    }
-}
-
-void lexer_destroy(TokenStream* stream) {
-    (void)stream;
-    // vector_destroy(&stream->tokens, lexer_destroy_token);
-}

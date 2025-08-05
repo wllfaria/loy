@@ -1,13 +1,17 @@
 #include "arena.h"
 #include "../defines.h"
 
-#define REGION_SIZE 1024
+#define BYTE        1
+#define KILOBYTE    (BYTE * 1024)
+#define MEGABYTE    (KILOBYTE * 1024)
+#define REGION_SIZE (MEGABYTE * 1)
 
 static void* arena_alloc_fn(void* ctx, u64 size) {
     return __arena_alloc((Arena*)ctx, size, alignof(max_align_t));
 }
 
 static void* arena_realloc_fn(void* ctx, void* ptr, u64 new_size) {
+    (void)ptr;
     // Arenas don't support realloc in place. Just allocate a new block.
     void* new_ptr = __arena_alloc((Arena*)ctx, new_size, alignof(max_align_t));
     // NOTE: We don't copy old data because we don't know its size.
@@ -16,6 +20,8 @@ static void* arena_realloc_fn(void* ctx, void* ptr, u64 new_size) {
 }
 
 static void* arena_free_fn(void* ctx, void* ptr) {
+    (void)ctx;
+    (void)ptr;
     // Arena doesn't support freeing individual blocks. So do nothing here
     return NULL;
 }

@@ -49,21 +49,16 @@ int main(void) {
 
     Allocator parser_arena = arena_create();
     Ast ast = parser_parse_token_stream(&parser_arena, &stream, file);
-    // (void)ast;
 
-    // vector_inspect(&stream.tokens, lexer_fmt_token);
+    // vector_inspect(&lexer_arena, &stream.tokens, lexer_fmt_token);
+    // vector_inspect(&parser_arena, &ast.statements, parser_fmt_node);
 
-    // vector_inspect(&ast.statements, parser_fmt_node);
-
-    // typer_typecheck_ast(ast);
-
-    // lexer_destroy(&stream);
-    // parser_destroy(&ast);
-    // free(file.ptr);
+    Allocator typer_arena = arena_create();
+    typer_typecheck_ast(&typer_arena, ast);
 
     arena_destroy(file_arena);
-    arena_destroy((Arena*)lexer_arena.ctx);
-    arena_destroy((Arena*)parser_arena.ctx);
-
+    arena_destroy(lexer_arena.ctx);
+    arena_destroy(parser_arena.ctx);
+    arena_destroy(typer_arena.ctx);
     return 0;
 }

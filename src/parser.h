@@ -95,7 +95,7 @@ Ast parser_parse_token_stream(
     StringSlice file
 );
 
-char* parser_fmt_node(void* node, u64 indentation);
+char* parser_fmt_node(Allocator* allocator, void* node, u64 indentation);
 void parser_destroy(Ast* ast);
 
 #endif

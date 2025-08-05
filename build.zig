@@ -114,7 +114,7 @@ pub fn build(b: *std.Build) !void {
     try compiler_flags.append("-Wextra");
     try compiler_flags.append("-Wconversion");
     try compiler_flags.append("-Wundef");
-    // try compiler_flags.append("-Werror");
+    try compiler_flags.append("-Werror");
 
     const loy = try buildCompiler(b, compiler_flags, target, optimize, allocator);
     const tests = try buildTests(b, compiler_flags, target, optimize, allocator);

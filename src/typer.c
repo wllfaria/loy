@@ -96,12 +96,9 @@ static Scope* typer_scope_get_current(TyperContext* ctx) {
     return vector_get_last(&ctx->scopes);
 }
 
-static void typer_fmt_scope(Scope* scope);
-
 static void typer_scope_add_symbol(TyperContext* ctx, char* name, Type* type) {
     Scope* curr_scope = typer_scope_get_current(ctx);
     hash_map_insert(&curr_scope->symbol_table, name, strlen(name), type);
-    typer_fmt_scope(curr_scope);
 }
 
 static Type* typer_scope_get_symbol(TyperContext* ctx, char* name) {
@@ -282,7 +279,6 @@ static char* format_type_decl(
     StringBuilder builder = string_builder_create(allocator);
     string_builder_write_format(&builder, "\"%s\": \"%s\"", key, value);
 
-    free(value);
     return string_builder_to_string(&builder);
 }
 
@@ -305,7 +301,6 @@ static char* format_fun_decl(
     string_builder_indent(&builder, indentation);
     char* return_type = format_type(allocator, fun->return_type);
     string_builder_write_format(&builder, ".return_type = \"%s\"", return_type);
-    free(return_type);
     string_builder_write_string(&builder, ",\n");
 
     string_builder_indent(&builder, indentation);
@@ -323,7 +318,6 @@ static char* format_fun_decl(
 
         char* type = format_type(allocator, arg->type);
         string_builder_write_format(&builder, "%s: ", type);
-        free(type);
 
         string_builder_write_format(&builder, "\"%s\"", arg->ident);
         string_builder_write_string(&builder, ",\n");
@@ -953,7 +947,6 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
             ".return_type = \"%s\",\n",
             return_type
         );
-        free(return_type);
 
         string_builder_indent(&builder, indentation);
         string_builder_write_string(&builder, ".args = [");
@@ -970,7 +963,6 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
 
             char* type = format_type(allocator, arg->type);
             string_builder_write_format(&builder, "%s: ", type);
-            free(type);
 
             string_builder_write_format(&builder, "\"%s\"", arg->ident);
             string_builder_write_string(&builder, ",\n");
@@ -1071,7 +1063,6 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
             ".type = \"%s\"\n",
             type
         );
-        free(type);
 
         string_builder_indent(&builder, indentation);
         string_builder_write_format(
@@ -1089,7 +1080,6 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
 
             char* arg_fmt = typer_fmt_node(allocator, arg, indentation);
             string_builder_write_format(&builder, "%s,\n", arg_fmt);
-            free(arg_fmt);
             pos++;
         }
         indentation--;
@@ -1105,7 +1095,6 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
         TypedIdent* ident = (TypedIdent*)node;
         char* type = format_type(allocator, ident->type);
         string_builder_write_format(&builder, "\"%s\"", type);
-        free(type);
         break;
     }
     case TYPED_NODE_FUN_ARG: {
@@ -1114,23 +1103,6 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
     }
 
     return string_builder_to_string(&builder);
-}
-
-static char* typer_fmt_symbol_table(
-    Allocator* allocator,
-    HashMapEntry* entry,
-    u64 indentation
-) {
-    (void)indentation;
-
-    StringBuilder builder = string_builder_create(allocator);
-    char* type = format_type(allocator, (Type*)entry->value);
-    string_builder_write_format(&builder, "%s: %s", (char*)entry->key, type);
-    return string_builder_to_string(&builder);
-}
-
-static void typer_fmt_scope(Scope* scope) {
-    hash_map_inspect(&scope->symbol_table, typer_fmt_symbol_table);
 }
 
 void typer_typecheck_ast(Allocator* allocator, Ast ast) {
@@ -1148,9 +1120,8 @@ void typer_typecheck_ast(Allocator* allocator, Ast ast) {
     typer_collect_type_decl(&ctx, &ast);
     typer_collect_functions(allocator, &ctx, &ast);
 
-    hash_map_inspect(&ctx.type_decl, format_type_decl);
-    hash_map_inspect(&ctx.functions, format_fun_decl);
-
+    hash_map_inspect(allocator, &ctx.type_decl, format_type_decl);
+    hash_map_inspect(allocator, &ctx.functions, format_fun_decl);
     TypedAst typed_ast = typer_typecheck_ast_nodes(allocator, &ctx, &ast);
 
     vector_inspect(allocator, &typed_ast.statements, typer_fmt_node);
