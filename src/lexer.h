@@ -1,8 +1,10 @@
 #ifndef _LEXER_H
 #define _LEXER_H
 
+#include "mem/allocator.h"
 #include "string/string_slice.h"
 #include "collections/vector.h"
+#include "error.h"
 
 typedef enum {
     TOKEN_EQUAL,
@@ -29,9 +31,10 @@ typedef enum {
 } TokenKind;
 
 typedef struct {
-    TokenKind kind;
-    char*     lexeme;
-    bool      is_signed;
+    TokenKind  kind;
+    char*      lexeme;
+    bool       is_signed;
+    ByteOffset byte_offset;
 } Token;
 
 typedef struct {
@@ -39,8 +42,8 @@ typedef struct {
     u64    pos;
 } TokenStream;
 
-TokenStream lexer_tokenize_file(StringSlice file);
-char* lexer_fmt_token(void* token, u64 indentation);
+TokenStream lexer_tokenize_file(Allocator* allocator, StringSlice file);
+char* lexer_fmt_token(Allocator* allocator, void* item, u64 indentation);
 void lexer_destroy(TokenStream* stream);
 
 #endif

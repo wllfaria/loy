@@ -2,6 +2,8 @@
 #define _PARSER_H
 
 #include "lexer.h"
+#include "string/string_slice.h"
+#include "mem/allocator.h"
 
 typedef Vector Statements;
 
@@ -87,7 +89,12 @@ typedef struct {
     Statements statements;
 } Ast;
 
-Ast parser_parse_token_stream(TokenStream* stream);
+Ast parser_parse_token_stream(
+    Allocator* allocator,
+    TokenStream* stream,
+    StringSlice file
+);
+
 char* parser_fmt_node(void* node, u64 indentation);
 void parser_destroy(Ast* ast);
 

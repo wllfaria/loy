@@ -2,6 +2,7 @@
 #define _LINKED_LIST_H
 
 #include "../defines.h"
+#include "../mem/allocator.h"
 
 typedef struct LinkedListItem {
     void*                  value;
@@ -12,10 +13,11 @@ typedef struct {
     LinkedListItem* head;
     LinkedListItem* tail;
     u64             len;
+    Allocator*      allocator;
 } LinkedList;
 
-LinkedList linked_list_create(void);
-void linked_list_destroy(LinkedList* list, FreeFn free_fn);
+LinkedList linked_list_create(Allocator* allocator);
+void linked_list_destroy(LinkedList* list);
 
 LinkedListItem* linked_list_insert_idx(LinkedList* list, u64 idx, void* value);
 LinkedListItem* linked_list_insert_head(LinkedList* list, void* value);

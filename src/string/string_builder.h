@@ -3,12 +3,14 @@
 
 #include "../collections/vector.h"
 #include "string_slice.h"
+#include "../mem/allocator.h"
 
 typedef struct {
-    Vector buf;
+    Vector     buf;
+    Allocator* allocator;
 } StringBuilder;
 
-StringBuilder string_builder_create(void);
+StringBuilder string_builder_create(Allocator* allocator);
 u64 string_builder_write_byte(StringBuilder* builder, char byte);
 u64 string_builder_write_slice(StringBuilder* builder, StringSlice slice);
 void string_builder_write_format(StringBuilder* builder, const char* fmt, ...);

@@ -2,12 +2,14 @@
 #define _HASH_MAP_H
 
 #include "../defines.h"
+#include "../mem/allocator.h"
 #include "vector.h"
 
 typedef struct {
-    Vector buckets;
-    u64    len;
-    u64    bucket_count;
+    Vector     buckets;
+    u64        len;
+    u64        bucket_count;
+    Allocator* allocator;
 } HashMap;
 
 typedef struct {
@@ -17,13 +19,13 @@ typedef struct {
     void* value;
 } HashMapEntry;
 
-HashMap hash_map_create(void);
-void hash_map_destroy(HashMap* hash_map, FreeFn free_fn);
+HashMap hash_map_create(Allocator* allocator);
+void hash_map_destroy(HashMap* hash_map);
 
 void* hash_map_get(HashMap* hash_map, void* key, u64 key_len);
 void hash_map_insert(HashMap* hash_map, void* key, u64 key_len, void* value);
 
-typedef char* (*EntryFmt)(HashMapEntry*, u64);
+typedef char* (*EntryFmt)(Allocator*, HashMapEntry*, u64);
 void hash_map_inspect(HashMap* hash_map, EntryFmt entry_fmt);
 
 #endif

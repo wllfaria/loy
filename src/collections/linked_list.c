@@ -2,26 +2,21 @@
 
 #include "linked_list.h"
 
-LinkedList linked_list_create(void) {
-    LinkedList list = { .head = NULL };
+LinkedList linked_list_create(Allocator* allocator) {
+    LinkedList list = {
+        .head = NULL,
+        .tail = NULL,
+        .allocator = allocator,
+        .len = 0,
+    };
     return list;
 }
 
-void linked_list_destroy(LinkedList* list, FreeFn free_fn) {
-    assert(list != NULL);
-    if(list->len == 0) return;
-
-    LinkedListItem* curr = list->head;
-    while(curr != NULL) {
-        if(free_fn) free_fn(curr->value);
-        LinkedListItem* tmp = curr;
-        curr = curr->next;
-        free(tmp);
-    }
-
+void linked_list_destroy(LinkedList* list) {
+    LOY_ASSERT(list != NULL, "invalid linked list pointer");
     list->head = NULL;
     list->tail = NULL;
-    list->len  = 0;
+    list->len = 0;
 }
 
 LinkedListItem* linked_list_insert_idx(LinkedList* list, u64 idx, void* value) {
@@ -35,10 +30,14 @@ LinkedListItem* linked_list_insert_idx(LinkedList* list, u64 idx, void* value) {
         curr = curr->next;
     }
 
-    LinkedListItem* item = malloc_bail(sizeof(LinkedListItem));
-    item->next  = curr->next;
+    LinkedListItem* item = list->allocator->alloc(
+        list->allocator->ctx,
+        sizeof(LinkedListItem)
+    );
+
+    item->next = curr->next;
     item->value = value;
-    curr->next  = item;
+    curr->next = item;
     list->len++;
     return item;
 }
@@ -46,7 +45,11 @@ LinkedListItem* linked_list_insert_idx(LinkedList* list, u64 idx, void* value) {
 LinkedListItem* linked_list_insert_head(LinkedList* list, void* value) {
     assert(list != NULL);
 
-    LinkedListItem* item = malloc_bail(sizeof(LinkedListItem));
+    LinkedListItem* item = list->allocator->alloc(
+        list->allocator->ctx,
+        sizeof(LinkedListItem)
+    );
+
     item->value = value;
 
     if(list->len > 0) item->next = list->head;
@@ -65,8 +68,12 @@ LinkedListItem* linked_list_insert_tail(LinkedList* list, void* value) {
 
     if(list->len == 0) return linked_list_insert_head(list, value);
 
-    LinkedListItem* item = malloc_bail(sizeof(LinkedListItem));
-    item->next  = NULL;
+    LinkedListItem* item = list->allocator->alloc(
+        list->allocator->ctx,
+        sizeof(LinkedListItem)
+    );
+
+    item->next = NULL;
     item->value = value;
     list->tail->next = item;
     list->tail = item;
@@ -159,7 +166,7 @@ LinkedListItem* linked_list_remove_tail(LinkedList* list) {
 
 LinkedListIter linked_list_iter(LinkedList* list) {
     LinkedListIter iter = {
-        .list   = list,
+        .list = list,
         .cursor = 0,
     };
     return iter;

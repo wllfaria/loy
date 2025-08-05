@@ -5,8 +5,11 @@
 
 #include "string_builder.h"
 
-StringBuilder string_builder_create(void) {
-    StringBuilder builder = { .buf = vector_create() };
+StringBuilder string_builder_create(Allocator* allocator) {
+    StringBuilder builder = {
+        .buf = vector_create(allocator),
+        .allocator = allocator,
+    };
     return builder;
 }
 
@@ -52,7 +55,7 @@ void string_builder_write_format(StringBuilder* builder, const char* fmt, ...) {
     }
 
     // If not, dynamically allocate the required size
-    char* dynamic = malloc_bail(len + 1);
+    char* dynamic = builder->allocator->alloc(builder->allocator->ctx, len + 1);
     if(!dynamic) {
         return;
     }
@@ -77,5 +80,5 @@ char* string_builder_to_string(StringBuilder* builder) {
 }
 
 void string_builder_destroy(StringBuilder* builder) {
-    vector_destroy(&builder->buf, NULL);
+    vector_destroy(&builder->buf);
 }

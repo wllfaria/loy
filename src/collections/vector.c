@@ -30,10 +30,11 @@ inline static void vector_grow_amortized(
     u64 min_cap = LOY_MAX(vec->cap * 2, required_cap);
     min_cap = LOY_MAX(vector_min_cap_for_size(t_size), min_cap);
 
-    void* new_buf = malloc_bail(t_size * min_cap);
-    memcpy(new_buf, vec->buf, vec->len * t_size);
-    free(vec->buf);
-    vec->buf = new_buf;
+    void* new;
+    new = vec->allocator->alloc(vec->allocator->ctx, t_size * min_cap);
+    memcpy(new, vec->buf, vec->len * t_size);
+    vec->allocator->free(vec->allocator->ctx, vec->buf);
+    vec->buf = new;
     vec->cap = min_cap;
 }
 
@@ -41,13 +42,15 @@ static void vector_resize_inner(Vector* vec, u64 additional, u64 t_size) {
     // Edge case of initializing a vector for the first time
     if(vec->len == 0 && vec->cap == 0 && vec->buf == NULL) {
         vec->cap = vector_min_cap_for_size(t_size);
-        vec->buf = malloc_bail(t_size * vec->cap);
+        Allocator* allocator = vec->allocator;
+        vec->buf = allocator->alloc(allocator->ctx, t_size * vec->cap);
         return;
     }
 
     // Edge case when the vector was initialized with a fixed capacity
     if(vec->len == 0 && vec->fixed_cap && vec->buf == NULL) {
-        vec->buf = malloc_bail(t_size * vec->cap);
+        Allocator* allocator = vec->allocator;
+        vec->buf = allocator->alloc(allocator->ctx, t_size * vec->cap);
         return;
     }
 
@@ -90,42 +93,36 @@ void __vec_push(Vector* vec, void* item, u64 item_size) {
     vector_push_inner(vec, item, item_size);
 }
 
-Vector vector_create(void) {
+Vector vector_create(Allocator* allocator) {
     Vector vec = {
-        .buf            = NULL,
-        .len            = 0,
-        .cap            = 0,
-        .t_size         = 0,
-        .fixed_cap      = false,
-        .is_ptr         = false,
+        .buf = NULL,
+        .len = 0,
+        .cap = 0,
+        .t_size = 0,
+        .fixed_cap = false,
+        .is_ptr = false,
         .is_initialized = false,
+        .allocator = allocator,
     };
 
     return vec;
 }
 
-Vector vector_create_with_capacity(u64 capacity) {
-    Vector vec = vector_create();
+Vector vector_create_with_capacity(Allocator* allocator, u64 capacity) {
+    Vector vec = vector_create(allocator);
     vec.fixed_cap = true;
     vec.cap = capacity;
     return vec;
 }
 
-void vector_destroy(Vector* vec, FreeFn free_fn) {
-    VectorIter iter = vector_iter(vec);
-
-    if(free_fn != NULL) {
-        void* next = vector_iter_next(&iter);
-        while(next != NULL) {
-            free_fn(next);
-            next = vector_iter_next(&iter);
-        }
+void vector_destroy(Vector* vec) {
+    if(vec->buf) {
+        vec->allocator->free(vec->allocator->ctx, vec->buf);
     }
-
-    free(vec->buf);
 }
 
 void* vector_get(Vector* vec, u64 idx) {
+    LOY_ASSERT(vec != NULL, "invalid vector pointer");
     if(idx >= vec->len) return NULL;
     void* item = (u8*)vec->buf + idx * vec->t_size;
     if(vec->is_ptr) return *(void**)item;
@@ -137,9 +134,8 @@ void* vector_get_last(Vector* vec) {
     return vector_get(vec, vec->len - 1);
 }
 
-void vector_inspect(Vector* vec, FmtFn fmt_fn) {
-    StringBuilder builder = string_builder_create();
-
+void vector_inspect(Allocator* allocator, Vector* vec, FmtFn fmt_fn) {
+    StringBuilder builder = string_builder_create(allocator);
     string_builder_write_string(&builder, "Vector{\n");
     string_builder_write_format(&builder, "    len: %llu,\n", vec->len);
     string_builder_write_format(&builder, "    cap: %llu,\n", vec->cap);
@@ -147,16 +143,15 @@ void vector_inspect(Vector* vec, FmtFn fmt_fn) {
 
     for(u64 i = 0; i < vec->len; i++) {
         void* raw = vector_get(vec, i);
-        char* formatted_item = fmt_fn(raw, 2);
+        char* formatted_item = fmt_fn(allocator, raw, 2);
         string_builder_write_string(&builder, formatted_item);
         string_builder_write_string(&builder, i < vec->len - 1 ? ",\n" : "\n");
-        free(formatted_item);
+        // free(formatted_item);
     }
 
     string_builder_write_string(&builder, "    ],\n");
     string_builder_write_string(&builder, "}\n");
     printf("%s", string_builder_to_string(&builder));
-    string_builder_destroy(&builder);
 }
 
 VectorIter vector_iter(Vector* vec) {

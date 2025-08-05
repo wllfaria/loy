@@ -5,6 +5,7 @@
 #include "hash_map.h"
 #include "linked_list.h"
 #include "../string/string_builder.h"
+#include "../mem/arena.h"
 
 #define MIN_MAP_BUCKET_SIZE 16
 #define MAP_GROW_THRESHOLD  2.5
@@ -30,18 +31,27 @@ static void hash_map_initialize(HashMap* hash_map) {
     u64 bucket_count = hash_map_figure_bucket_count(hash_map);
 
     hash_map->bucket_count = bucket_count;
-    hash_map->buckets = vector_create_with_capacity(bucket_count);
-    hash_map->len = 0;          // this is already set, but doesn't hurt
+    hash_map->len = 0; // this is already set, but doesn't hurt
+    hash_map->buckets = vector_create_with_capacity(
+        hash_map->allocator,
+        bucket_count
+    );
 
     for(u8 i = 0; i < bucket_count; i++) {
-        vector_push(&hash_map->buckets, linked_list_create());
+        vector_push(
+            &hash_map->buckets,
+            linked_list_create(hash_map->allocator)
+        );
     }
 }
 
 static void hash_map_grow(HashMap* hash_map, u64 bucket_count) {
-    Vector new_buckets = vector_create_with_capacity(bucket_count);
+    Vector new_buckets = vector_create_with_capacity(
+        hash_map->allocator,
+        bucket_count
+    );
     for(u64 i = 0; i < bucket_count; i++) {
-        vector_push(&new_buckets, linked_list_create());
+        vector_push(&new_buckets, linked_list_create(hash_map->allocator));
     }
 
     // Go over every bucket we have, so we can copy pointers to the new buckets
@@ -64,25 +74,26 @@ static void hash_map_grow(HashMap* hash_map, u64 bucket_count) {
 
     for(u64 i = 0; i < hash_map->bucket_count; i++) {
         LinkedList* bucket = vector_get(&hash_map->buckets, i);
-        linked_list_destroy(bucket, NULL); // Don't free entries, just the structure
+        linked_list_destroy(bucket); // Don't free entries, just the structure
     }
 
-    vector_destroy(&hash_map->buckets, NULL);
+    vector_destroy(&hash_map->buckets);
     hash_map->buckets = new_buckets;
     hash_map->bucket_count = bucket_count;
 }
 
 static HashMapEntry* hash_map_entry_create(
+    HashMap* map,
     void* key,
     u64 key_len,
     u64 key_hash,
     void* value
 ) {
-    HashMapEntry* entry = malloc_bail(sizeof(HashMapEntry));
-
-    // Copy the key so we own the pointer data
-    entry->key = malloc_bail(key_len);
-    memcpy(entry->key, key, key_len + 1);
+    HashMapEntry* entry = map->allocator->alloc(
+        map->allocator->ctx,
+        sizeof(HashMapEntry)
+    );
+    entry->key = key;
     entry->key_len = key_len;
     entry->hash = key_hash;
     entry->value = value;
@@ -103,31 +114,23 @@ static u64 hash_buffer(const void* buffer, u64 len) {
     return hash;
 }
 
-HashMap hash_map_create(void) {
+HashMap hash_map_create(Allocator* allocator) {
     HashMap hash_map = {
-        .buckets      = vector_create(),
-        .len          = 0,
+        .buckets = vector_create(allocator),
+        .len = 0,
         .bucket_count = 0,
+        .allocator = allocator,
     };
     return hash_map;
 }
 
-void hash_map_destroy(HashMap* hash_map, FreeFn free_fn) {
+void hash_map_destroy(HashMap* hash_map) {
     for(u64 i = 0; i < hash_map->bucket_count; i++) {
         LinkedList* bucket = (LinkedList*)vector_get(&hash_map->buckets, i);
-        LinkedListIter iter = linked_list_iter(bucket);
-
-        while(linked_list_peek(&iter) != NULL) {
-            LinkedListItem* val = (LinkedListItem*)linked_list_next(&iter);
-            HashMapEntry* entry = (HashMapEntry*)val->value;
-            free(entry->key);
-            free(entry);
-        }
-
-        linked_list_destroy(bucket, free_fn);
+        linked_list_destroy(bucket);
     }
 
-    vector_destroy(&hash_map->buckets, NULL);
+    vector_destroy(&hash_map->buckets);
 }
 
 void* hash_map_get(HashMap* hash_map, void* key, u64 key_len) {
@@ -165,7 +168,13 @@ void hash_map_insert(HashMap* hash_map, void* key, u64 key_len, void* value) {
     u64 idx = hash_map_idx_from_key_hash(hash_map->bucket_count, key_hash);
 
     LinkedList* bucket = (LinkedList*)vector_get(&hash_map->buckets, idx);
-    HashMapEntry* entry = hash_map_entry_create(key, key_len, key_hash, value);
+    HashMapEntry* entry = hash_map_entry_create(
+        hash_map,
+        key,
+        key_len,
+        key_hash,
+        value
+    );
 
     linked_list_insert_tail(bucket, entry);
     hash_map->len++;
@@ -178,7 +187,8 @@ void hash_map_insert(HashMap* hash_map, void* key, u64 key_len, void* value) {
 
 void hash_map_inspect(HashMap* hash_map, EntryFmt entry_fmt) {
     assert(hash_map != NULL);
-    StringBuilder builder = string_builder_create();
+    Allocator allocator = arena_create();
+    StringBuilder builder = string_builder_create(&allocator);
 
     string_builder_write_string(&builder, "HashMap{\n");
 
@@ -189,7 +199,7 @@ void hash_map_inspect(HashMap* hash_map, EntryFmt entry_fmt) {
         while(linked_list_peek(&iter) != NULL) {
             LinkedListItem* val = (LinkedListItem*)linked_list_next(&iter);
             HashMapEntry* entry = (HashMapEntry*)val->value;
-            char* formatted_entry = entry_fmt(entry, 1);
+            char* formatted_entry = entry_fmt(&allocator, entry, 1);
             string_builder_indent(&builder, 1);
             string_builder_write_string(&builder, formatted_entry);
             string_builder_write_string(&builder, ",\n");

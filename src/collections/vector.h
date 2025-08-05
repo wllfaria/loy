@@ -4,15 +4,17 @@
 #include <stdio.h>
 
 #include "../defines.h"
+#include "../mem/allocator.h"
 
 typedef struct {
-    void* buf;
-    u64   len;
-    u64   cap;
-    bool  fixed_cap;
-    u64   t_size;
-    bool  is_ptr;
-    bool  is_initialized;
+    void*      buf;
+    u64        len;
+    u64        cap;
+    bool       fixed_cap;
+    u64        t_size;
+    bool       is_ptr;
+    bool       is_initialized;
+    Allocator* allocator;
 } Vector;
 
 #define vector_push(vec, value)                                        \
@@ -29,7 +31,9 @@ typedef struct {
 
 #define vector_push_ptr(vec, ptr)                                            \
     do {                                                                     \
-        if(!(vec)->is_initialized) (vec)->is_ptr = true;                     \
+        if(!(vec)->is_initialized) {                                         \
+            (vec)->is_ptr = true;                                            \
+        }                                                                    \
         if((vec)->is_ptr) {                                                  \
             void* temp_ptr = (void*)ptr;                                     \
             extern void __vec_push(Vector*, void*, u64);                     \
@@ -41,9 +45,9 @@ typedef struct {
         }                                                                    \
     } while(0)
 
-Vector vector_create(void);
-Vector vector_create_with_capacity(u64 capacity);
-void vector_destroy(Vector* vec, FreeFn fn);
+Vector vector_create(Allocator* allocator);
+Vector vector_create_with_capacity(Allocator* allocator, u64 capacity);
+void vector_destroy(Vector* vec);
 void* vector_get(Vector* vec, u64 idx);
 void* vector_get_last(Vector* vec);
 
@@ -52,11 +56,11 @@ typedef struct {
     u64     cursor;
 } VectorIter;
 
-typedef char* (*FmtFn)(void*, u64);
+typedef char* (*FmtFn)(Allocator*, void*, u64);
 
 VectorIter vector_iter(Vector* vec);
 void* vector_iter_next(VectorIter* iter);
 void* vector_iter_peek(VectorIter* iter);
-void vector_inspect(Vector* vec, FmtFn fmt_fn);
+void vector_inspect(Allocator* allocator, Vector* vec, FmtFn fmt_fn);
 
 #endif

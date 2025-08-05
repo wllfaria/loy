@@ -2,6 +2,7 @@
 #define _TYPER_H
 
 #include "collections/hash_map.h"
+#include "mem/allocator.h"
 #include "parser.h"
 
 typedef Vector TypedStatements;
@@ -143,6 +144,6 @@ typedef struct {
 // static void typer_typecheck_ast_node(AstNode* node);
 // static void typer_typecheck_function(AstFunNode* node);
 
-void typer_typecheck_ast(Ast ast);
+void typer_typecheck_ast(Allocator* allocator, Ast ast);
 
 #endif

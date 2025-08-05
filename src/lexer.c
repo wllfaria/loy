@@ -55,27 +55,54 @@ static const char* lexer_fmt_token_kind(TokenKind kind) {
     return "";
 }
 
-char* lexer_fmt_token(void* item, u64 indentation) {
+char* lexer_fmt_token(Allocator* allocator, void* item, u64 indentation) {
     Token* token = (Token*)item;
-    StringBuilder builder = string_builder_create();
+    StringBuilder builder = string_builder_create(allocator);
     const char* kind = lexer_fmt_token_kind(token->kind);
 
     string_builder_indent(&builder, indentation);
     string_builder_write_string(&builder, "Token{\n");
-    string_builder_indent(&builder, indentation + 1);
+    indentation++;
+    string_builder_indent(&builder, indentation);
 
     string_builder_write_format(&builder, ".kind = %s,\n", kind);
-    string_builder_indent(&builder, indentation + 1);
+    string_builder_indent(&builder, indentation);
     string_builder_write_format(&builder, ".lexeme = \"%s\",\n", token->lexeme);
 
+    string_builder_indent(&builder, indentation);
+    string_builder_write_string(&builder, ".byte_offset = ");
+    char* byte_offset = fmt_byte_offset(
+        allocator,
+        token->byte_offset,
+        indentation
+    );
+    string_builder_write_string(&builder, byte_offset);
+    string_builder_write_string(&builder, ",\n");
+
+    indentation--;
     string_builder_indent(&builder, indentation);
     string_builder_write_byte(&builder, '}');
 
     return string_builder_to_string(&builder);
 }
 
-static Token tokenize_identifier(StringChars* chars, char start_ch) {
-    StringBuilder builder = string_builder_create();
+static Token make_token(TokenKind kind, char* lexeme, u64 start, u64 len) {
+    u64 offset_end = start + len;
+    Token tok = {
+        .kind = kind,
+        .lexeme = lexeme,
+        .byte_offset = { .start = start, .end = offset_end },
+    };
+    return tok;
+}
+
+static Token tokenize_identifier(
+    Allocator* allocator,
+    StringChars* chars,
+    char start_ch
+) {
+    StringBuilder builder = string_builder_create(allocator);
+    u64 start = chars->cursor - 1;
 
     string_builder_write_byte(&builder, start_ch);
 
@@ -88,9 +115,8 @@ static Token tokenize_identifier(StringChars* chars, char start_ch) {
 
     char* lexeme = string_builder_to_string(&builder);
     TokenKind kind = lookup_keyword(lexeme);
-
-    Token tok = { .kind = kind, .lexeme = lexeme };
-    return tok;
+    u64 len = chars->cursor - start;
+    return make_token(kind, lexeme, start, len);
 }
 
 static void tokenize_digits(StringChars* chars, StringBuilder* builder) {
@@ -102,10 +128,15 @@ static void tokenize_digits(StringChars* chars, StringBuilder* builder) {
     }
 }
 
-static Token tokenize_number(StringChars* chars, char start_ch) {
-    StringBuilder builder = string_builder_create();
+static Token tokenize_number(
+    Allocator* allocator,
+    StringChars* chars,
+    char start_ch
+) {
+    StringBuilder builder = string_builder_create(allocator);
     TokenKind kind = TOKEN_INT;
     bool is_signed = false;
+    u64 start = chars->cursor - 1;
 
     if(start_ch == '-') is_signed = true;
     string_builder_write_byte(&builder, start_ch);
@@ -119,17 +150,10 @@ static Token tokenize_number(StringChars* chars, char start_ch) {
         tokenize_digits(chars, &builder);
     }
 
-    Token tok = {
-        .kind      = kind,
-        .lexeme    = string_builder_to_string(&builder),
-        .is_signed = is_signed,
-    };
-
-    return tok;
-}
-
-static Token make_token(TokenKind kind, char* lexeme) {
-    Token tok = { .kind = kind, .lexeme = lexeme };
+    char* lexeme = string_builder_to_string(&builder);
+    u64 len = chars->cursor - start;
+    Token tok = make_token(kind, lexeme, start, len);
+    tok.is_signed = is_signed;
     return tok;
 }
 
@@ -141,11 +165,12 @@ static void consume_until_newline(StringChars* chars) {
     }
 }
 
-TokenStream lexer_tokenize_file(StringSlice file) {
+TokenStream lexer_tokenize_file(Allocator* allocator, StringSlice file) {
     StringChars chars = string_slice_chars(file);
-    Vector tokens = vector_create();
+    Vector tokens = vector_create(allocator);
 
     for(;;) {
+        u64 start = chars.cursor;
         char curr = string_chars_next(&chars);
         char next = string_chars_peek(&chars);
 
@@ -155,19 +180,22 @@ TokenStream lexer_tokenize_file(StringSlice file) {
         // Double character tokens
         if(curr == '+' && next == '=') {
             string_chars_next(&chars); // Consume peeked token
-            vector_push(&tokens, make_token(TOKEN_ASSIGN_ADD, "+="));
+            Token token = make_token(TOKEN_ASSIGN_ADD, "+=", start, 2);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == '+' && next == '+') {
             string_chars_next(&chars); // Consume peeked token
-            vector_push(&tokens, make_token(TOKEN_PLUS_PLUS, "++"));
+            Token token = make_token(TOKEN_PLUS_PLUS, "++", start, 2);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == '-' && next == '>') {
             string_chars_next(&chars); // Consume peeked token
-            vector_push(&tokens, make_token(TOKEN_THIN_ARROW, "->"));
+            Token token = make_token(TOKEN_THIN_ARROW, "->", start, 2);
+            vector_push(&tokens, token);
             continue;
         }
 
@@ -177,67 +205,79 @@ TokenStream lexer_tokenize_file(StringSlice file) {
         }
 
         if(curr == '-' && is_digit(next)) {
-            vector_push(&tokens, tokenize_number(&chars, curr));
+            vector_push(&tokens, tokenize_number(allocator, &chars, curr));
             continue;
         }
 
         // Single character tokens
         if(curr == '+') {
-            vector_push(&tokens, make_token(TOKEN_PLUS, "+"));
+            Token token = make_token(TOKEN_PLUS, "+", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == ',') {
-            vector_push(&tokens, make_token(TOKEN_COMMA, ","));
+            Token token = make_token(TOKEN_COMMA, ",", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == '=') {
-            vector_push(&tokens, make_token(TOKEN_EQUAL, "="));
+            Token token = make_token(TOKEN_EQUAL, "=", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == ':') {
-            vector_push(&tokens, make_token(TOKEN_COLON, ":"));
+            Token token = make_token(TOKEN_COLON, ":", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == ';') {
-            vector_push(&tokens, make_token(TOKEN_SEMI, ";"));
+            Token token = make_token(TOKEN_SEMI, ";", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == '(') {
-            vector_push(&tokens, make_token(TOKEN_LPAREN, "("));
+            Token token = make_token(TOKEN_LPAREN, "(", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == ')') {
-            vector_push(&tokens, make_token(TOKEN_RPAREN, ")"));
+            Token token = make_token(TOKEN_RPAREN, ")", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == '{') {
-            vector_push(&tokens, make_token(TOKEN_LBRACE, "{"));
+            Token token = make_token(TOKEN_LBRACE, "{", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(curr == '}') {
-            vector_push(&tokens, make_token(TOKEN_RBRACE, "}"));
+            Token token = make_token(TOKEN_RBRACE, "}", start, 1);
+            vector_push(&tokens, token);
             continue;
         }
 
         if(is_valid_identifier_starter(curr)) {
-            vector_push(&tokens, tokenize_identifier(&chars, curr));
+            vector_push(&tokens, tokenize_identifier(allocator, &chars, curr));
             continue;
         }
 
         if(is_digit(curr)) {
-            vector_push(&tokens, tokenize_number(&chars, curr));
+            vector_push(&tokens, tokenize_number(allocator, &chars, curr));
             continue;
         }
 
-        fprintf(stderr, "Unknown token %c\n", curr);
+        fprintf(stderr, "Syntax error: invalid token `%c`\n", curr);
+        ByteOffset offset = { .start = chars.cursor - 1, .end = chars.cursor };
+        Location loc = location_from_byte_offset(file, offset);
+        fprintf(stderr, "@ line: %lu, column: %lu\n", loc.line, loc.column);
         exit(EXIT_FAILURE);
     }
 
@@ -267,11 +307,12 @@ static void lexer_destroy_token(void* item) {
     case TOKEN_FUN:
     case TOKEN_INT:
     case TOKEN_FLOAT:
-        free((char*)token->lexeme);
+        // free((char*)token->lexeme);
         break;
     }
 }
 
 void lexer_destroy(TokenStream* stream) {
-    vector_destroy(&stream->tokens, lexer_destroy_token);
+    (void)stream;
+    // vector_destroy(&stream->tokens, lexer_destroy_token);
 }

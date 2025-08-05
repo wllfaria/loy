@@ -2,17 +2,21 @@
 
 #include "vector.h"
 #include "../../src/collections/vector.h"
+#include "../../src/mem/arena.h"
 
 TestResult test_vector_initialization(void) {
-    Vector vec = vector_create();
+    Allocator allocator = arena_create();
+    Vector vec = vector_create(&allocator);
     test_assert(vec.buf == NULL);
     test_assert(vec.cap == 0);
     test_assert(vec.len == 0);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_vector_growth(void) {
-    Vector vec = vector_create();
+    Allocator allocator = arena_create();
+    Vector vec = vector_create(&allocator);
     test_assert(vec.cap == 0);
     vector_push(&vec, 0ull);
     test_assert(vec.cap == 4);
@@ -27,12 +31,14 @@ TestResult test_vector_growth(void) {
     }
 
     test_assert(vec.len == 100);
-    vector_destroy(&vec, NULL);
+    vector_destroy(&vec);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_vec_push_ptr(void) {
-    Vector vec = vector_create();
+    Allocator allocator = arena_create();
+    Vector vec = vector_create(&allocator);
     const char* words[] = { "alpha", "beta", "gamma" };
 
     for(u64 i = 0; i < 3; i++) {
@@ -40,16 +46,18 @@ TestResult test_vec_push_ptr(void) {
     }
 
     for(u64 i = 0; i < 3; i++) {
-        char** val = vector_get(&vec, i);
-        test_assert(strcmp(*val, words[i]) == 0);
+        char* val = vector_get(&vec, i);
+        test_assert(strcmp(val, words[i]) == 0);
     }
 
-    vector_destroy(&vec, NULL);
+    vector_destroy(&vec);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_vector_iterator(void) {
-    Vector vec = vector_create();
+    Allocator allocator = arena_create();
+    Vector vec = vector_create(&allocator);
     for(u64 i = 0; i < 5; i++) {
         vector_push(&vec, i);
     }
@@ -68,33 +76,14 @@ TestResult test_vector_iterator(void) {
     test_assert(vector_iter_peek(&iter) == NULL);
     test_assert(vector_iter_next(&iter) == NULL);
 
-    vector_destroy(&vec, NULL);
-    return TEST_PASS;
-}
-
-u64 freed = 0;
-
-void free_counter(void* ptr) {
-    void* item = *(void**)ptr;
-    free(item);
-    freed++;
-}
-
-TestResult test_vector_free_fn(void) {
-    Vector vec = vector_create();
-
-    for(int i = 0; i < 5; i++) {
-        Vector* item = malloc_bail(sizeof(Vector));
-        vector_push_ptr(&vec, item);
-    }
-
-    vector_destroy(&vec, free_counter);
-    test_assert(freed == 5);
+    vector_destroy(&vec);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_vector_push_and_get(void) {
-    Vector vec = vector_create();
+    Allocator allocator = arena_create();
+    Vector vec = vector_create(&allocator);
 
     for(u64 i = 0; i < 10; i++) {
         vector_push(&vec, i);
@@ -104,7 +93,8 @@ TestResult test_vector_push_and_get(void) {
     }
 
     test_assert(vec.len == 10);
-    vector_destroy(&vec, NULL);
+    vector_destroy(&vec);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
@@ -126,17 +116,13 @@ TestCase vector_test_cases[] = {
         .subject = test_vector_iterator
     },
     {
-        .name = "test_vector_free_fn",
-        .subject = test_vector_free_fn
-    },
-    {
         .name = "test_vector_push_and_get",
         .subject = test_vector_push_and_get
     },
 };
 
 TestSuite const vector_test_suite = {
-    .name  = "vector",
+    .name = "vector",
     .cases = vector_test_cases,
     .count = sizeof(vector_test_cases) / sizeof(vector_test_cases[0]),
 };

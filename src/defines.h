@@ -5,6 +5,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef unsigned char  u8;
 typedef unsigned short u16;
@@ -19,14 +20,21 @@ typedef long  i64;
 typedef float  f32;
 typedef double f64;
 
-typedef void (*FreeFn)(void*);
-
-void* malloc_bail(u64 node_size);
-
 #define LOY_MAX(a, b) (a > b ? a : b)
 #define LOY_MIN(a, b) (a < b ? a : b)
 
+#define LOY_ASSERT(cond, msg)                                 \
+    do {                                                      \
+        if(!(cond)) {                                         \
+            fprintf(stderr, "Assertion failed: %s\n", msg);   \
+            fprintf(stderr, "@ %s:%d\n", __FILE__, __LINE__); \
+            exit(EXIT_FAILURE);                               \
+        }                                                     \
+    } while(0)                                                \
+
 #define ARRAY_LEN(arr) sizeof(arr) / sizeof(arr[0])
+
+#define alignof(type) __alignof__(type)
 
 #define PP_SPACES 4
 

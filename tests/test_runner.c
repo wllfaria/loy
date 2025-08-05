@@ -3,12 +3,12 @@
 #include "test_runner.h"
 #include "stdarg.h"
 
-const char* RESET      = "\x1B[0m";
+const char* RESET = "\x1B[0m";
 const char* UNDERSCORE = "\x1B[4m";
-const char* GREEN      = "\x1B[32m";
-const char* PURPLE     = "\x1B[35m";
-const char* RED        = "\x1B[31m";
-const char* YELLOW     = "\x1B[33m";
+const char* GREEN = "\x1B[32m";
+const char* PURPLE = "\x1B[35m";
+const char* RED = "\x1B[31m";
+const char* YELLOW = "\x1B[33m";
 
 typedef struct {
     const char* suite;
@@ -24,9 +24,9 @@ typedef struct {
 } TestRun;
 
 static TestRun run = {
-    .failed  = 0,
-    .tests   = 0,
-    .passed  = 0,
+    .failed = 0,
+    .tests = 0,
+    .passed = 0,
     .skipped = 0,
 };
 
@@ -34,7 +34,7 @@ static TestReport curr_test;
 
 TestSuite test_suite_create(const char* name, TestCase cases[], u64 count) {
     TestSuite suite = {
-        .name  = name,
+        .name = name,
         .cases = cases,
         .count = count,
     };
@@ -63,8 +63,8 @@ void test_runner_print_report(TestReport report) {
 }
 
 void test_runner_print_summary(void) {
-    u64  total_tests_run = run.failed + run.passed;
-    u64  missing_tests   = run.tests - run.failed - run.passed - run.skipped;
+    u64 total_tests_run = run.failed + run.passed;
+    u64 missing_tests = run.tests - run.failed - run.passed - run.skipped;
     bool has_failed_test = run.failed > 0;
 
     fprintf(stderr, "────────────\n");
@@ -115,13 +115,13 @@ void test_runner_run(TestConfig* config) {
         TestSuite* suite = &config->suites[i];
 
         for(u64 j = 0; j < suite->count; j++) {
-            TestCase*  test   = &suite->cases[j];
+            TestCase* test = &suite->cases[j];
             TestReport report = {
-                .suite  = suite->name,
-                .test   = test->name,
+                .suite = suite->name,
+                .test = test->name,
                 .result = TEST_WAIT,
             };
-            curr_test        = report;
+            curr_test = report;
             curr_test.result = test->subject();
             test_runner_print_report(curr_test);
             // Terminate test run if we encounter a failing test that failed
@@ -158,7 +158,7 @@ void test_error_print(const char* file, u64 line, const char* fmt, ...) {
 
     fprintf(stderr, "    @ %s:%ld\n", file, line);
 
-    u64  missing_tests     = run.tests - run.failed - run.passed - run.skipped;
+    u64 missing_tests = run.tests - run.failed - run.passed - run.skipped;
     bool has_run_all_tests = missing_tests == 0;
 
     if(!has_run_all_tests) {

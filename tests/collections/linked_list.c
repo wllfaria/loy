@@ -1,39 +1,13 @@
 #include "linked_list.h"
 #include "../../src/collections/linked_list.h"
-
-static u64 free_called = 0;
-
-void mock_free(void* ptr) {
-    (void)ptr; // silence unused warning
-    free_called++;
-}
-
-TestResult test_destroy(void) {
-    LinkedList list = linked_list_create();
-
-    u64 a = 1;
-    u64 b = 2;
-    u64 c = 3;
-
-    linked_list_insert_tail(&list, &a);
-    linked_list_insert_tail(&list, &b);
-    linked_list_insert_tail(&list, &c);
-    test_assert(list.len == 3);
-
-    free_called = 0;
-    linked_list_destroy(&list, mock_free);
-
-    test_assert(free_called == 3);
-
-    linked_list_destroy(&list, NULL);
-    return TEST_PASS;
-}
+#include "../../src/mem/arena.h"
 
 TestResult test_insert_idx(void) {
-    LinkedList list = linked_list_create();
-    u64 first       = 1;
-    u64 second      = 2;
-    u64 third       = 3;
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
+    u64 first = 1;
+    u64 second = 2;
+    u64 third = 3;
     linked_list_insert_tail(&list, &first);
     linked_list_insert_tail(&list, &second);
     linked_list_insert_tail(&list, &third);
@@ -47,12 +21,14 @@ TestResult test_insert_idx(void) {
     test_assert(*(u64*)list.tail->value == 3);
     test_assert(list.len == 4);
 
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_insert_head(void) {
-    LinkedList list = linked_list_create();
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
 
     u64 first = 1;
     linked_list_insert_head(&list, &first);
@@ -68,12 +44,14 @@ TestResult test_insert_head(void) {
     test_assert(list.len == 2);
     test_assert(list.head != list.tail);
 
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_insert_tail(void) {
-    LinkedList list = linked_list_create();
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
 
     u64 first = 1;
     linked_list_insert_tail(&list, &first);
@@ -89,15 +67,17 @@ TestResult test_insert_tail(void) {
     test_assert(list.len == 2);
     test_assert(list.head != list.tail);
 
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_get_idx_existing(void) {
-    LinkedList list = linked_list_create();
-    u64 first       = 1;
-    u64 second      = 2;
-    u64 third       = 3;
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
+    u64 first = 1;
+    u64 second = 2;
+    u64 third = 3;
 
     linked_list_insert_tail(&list, &first);
     linked_list_insert_tail(&list, &second);
@@ -109,15 +89,17 @@ TestResult test_get_idx_existing(void) {
     test_assert(result->next == NULL);
     test_assert(*(u64*)result->value == 3);
 
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_get_idx_null(void) {
-    LinkedList list = linked_list_create();
-    u64 first       = 1;
-    u64 second      = 2;
-    u64 third       = 3;
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
+    u64 first = 1;
+    u64 second = 2;
+    u64 third = 3;
 
     linked_list_insert_tail(&list, &first);
     linked_list_insert_tail(&list, &second);
@@ -127,15 +109,17 @@ TestResult test_get_idx_null(void) {
 
     test_assert(result == NULL);
 
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_remove_idx_first(void) {
-    LinkedList list = linked_list_create();
-    u64 first       = 1;
-    u64 second      = 2;
-    u64 third       = 3;
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
+    u64 first = 1;
+    u64 second = 2;
+    u64 third = 3;
 
     linked_list_insert_tail(&list, &first);
     linked_list_insert_tail(&list, &second);
@@ -151,16 +135,17 @@ TestResult test_remove_idx_first(void) {
     test_assert(*(u64*)list.tail->value == 3);
     test_assert(list.len == 2);
 
-    free(result);
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_remove_idx_middle(void) {
-    LinkedList list = linked_list_create();
-    u64 first       = 1;
-    u64 second      = 2;
-    u64 third       = 3;
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
+    u64 first = 1;
+    u64 second = 2;
+    u64 third = 3;
 
     linked_list_insert_tail(&list, &first);
     linked_list_insert_tail(&list, &second);
@@ -176,16 +161,17 @@ TestResult test_remove_idx_middle(void) {
     test_assert(*(u64*)list.tail->value == 3);
     test_assert(list.len == 2);
 
-    free(result);
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_remove_head(void) {
-    LinkedList list = linked_list_create();
-    u64 first       = 1;
-    u64 second      = 2;
-    u64 third       = 3;
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
+    u64 first = 1;
+    u64 second = 2;
+    u64 third = 3;
 
     linked_list_insert_tail(&list, &first);
     linked_list_insert_tail(&list, &second);
@@ -201,16 +187,17 @@ TestResult test_remove_head(void) {
     test_assert(*(u64*)list.tail->value == 3);
     test_assert(list.len == 2);
 
-    free(result);
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestResult test_remove_tail(void) {
-    LinkedList list = linked_list_create();
-    u64 first       = 1;
-    u64 second      = 2;
-    u64 third       = 3;
+    Allocator allocator = arena_create();
+    LinkedList list = linked_list_create(&allocator);
+    u64 first = 1;
+    u64 second = 2;
+    u64 third = 3;
 
     linked_list_insert_tail(&list, &first);
     linked_list_insert_tail(&list, &second);
@@ -226,56 +213,52 @@ TestResult test_remove_tail(void) {
     test_assert(*(u64*)list.tail->value == 2);
     test_assert(list.len == 2);
 
-    free(result);
-    linked_list_destroy(&list, NULL);
+    linked_list_destroy(&list);
+    arena_destroy(allocator.ctx);
     return TEST_PASS;
 }
 
 TestCase linked_list_test_cases[] = {
     {
-        .name    = "test_linked_list_destroy",
-        .subject = test_destroy
-    },
-    {
-        .name    = "test_linked_list_insert_idx",
+        .name = "test_linked_list_insert_idx",
         .subject = test_insert_idx
     },
     {
-        .name    = "test_linked_list_insert_head",
+        .name = "test_linked_list_insert_head",
         .subject = test_insert_head
     },
     {
-        .name    = "test_linked_list_insert_tail",
+        .name = "test_linked_list_insert_tail",
         .subject = test_insert_tail
     },
     {
-        .name    = "test_linked_list_get_idx_existing",
+        .name = "test_linked_list_get_idx_existing",
         .subject = test_get_idx_existing
     },
     {
-        .name    = "test_linked_list_get_idx_null",
+        .name = "test_linked_list_get_idx_null",
         .subject = test_get_idx_null
     },
     {
-        .name    = "test_linked_list_remove_idx_first",
+        .name = "test_linked_list_remove_idx_first",
         .subject = test_remove_idx_first
     },
     {
-        .name    = "test_linked_list_remove_idx_middle",
+        .name = "test_linked_list_remove_idx_middle",
         .subject = test_remove_idx_middle
     },
     {
-        .name    = "test_linked_list_remove_head",
+        .name = "test_linked_list_remove_head",
         .subject = test_remove_head
     },
     {
-        .name    = "test_linked_list_remove_tail",
+        .name = "test_linked_list_remove_tail",
         .subject = test_remove_tail
     },
 };
 
 TestSuite const linked_list_test_suite = {
-    .name  = "linked_list",
+    .name = "linked_list",
     .cases = linked_list_test_cases,
     .count = sizeof(linked_list_test_cases) / sizeof(linked_list_test_cases[0]),
 };

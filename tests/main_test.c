@@ -12,10 +12,10 @@ int main(void) {
 
     TestConfig config = {
         .suites = suites,
-        .count  = sizeof(suites) / sizeof(suites[0]),
+        .count = sizeof(suites) / sizeof(suites[0]),
     };
 
     test_runner_run(&config);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
