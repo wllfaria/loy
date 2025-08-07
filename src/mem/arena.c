@@ -32,14 +32,24 @@ static u64 ensure_alignment(u64 cursor, u64 align) {
 
 static Region* arena_region_create(u64 size) {
     Region* region = malloc(sizeof(Region));
+    if(region == NULL) return NULL;
+
+    u64 actual_size = LOY_MAX(REGION_SIZE, size);
+    void* start_ptr = malloc(actual_size);
+    if(start_ptr == NULL) {
+        free(region);
+        return NULL;
+    }
+
     region->cursor = 0;
-    region->size = LOY_MAX(REGION_SIZE, size);
+    region->size = actual_size;
     region->next = NULL;
-    region->start = malloc(region->size);
+    region->start = start_ptr;
     return region;
 }
 
 static Region* arena_region_get_current(Arena* arena) {
+    LOY_ASSERT_NE(arena->regions, NULL, "arena has no base region");
     Region* curr = arena->regions;
     while(curr->next) {
         curr = curr->next;
@@ -52,9 +62,12 @@ static void arena_append_region(Arena* arena, Region* region) {
     curr->next = region;
 }
 
-Allocator arena_create(void) {
+LoyResult arena_create(Allocator* out) {
     Arena* arena = malloc(sizeof(Arena));
+    if(arena == NULL) return LOY_ERROR_ALLOC;
+
     arena->regions = arena_region_create(REGION_SIZE);
+    if(arena->regions == NULL) return LOY_ERROR_ALLOC;
 
     Allocator allocator = {
         .ctx = arena,
@@ -63,7 +76,8 @@ Allocator arena_create(void) {
         .realloc = arena_realloc_fn,
     };
 
-    return allocator;
+    *out = allocator;
+    return LOY_OK;
 }
 
 void* __arena_alloc(Arena* arena, u64 size, u64 align) {
@@ -76,6 +90,8 @@ void* __arena_alloc(Arena* arena, u64 size, u64 align) {
 
     if(new_cursor + size > region->size) {
         Region* new_region = arena_region_create(size);
+        if(new_region == NULL) return NULL;
+
         arena_append_region(arena, new_region);
         return __arena_alloc(arena, size, align);
     }

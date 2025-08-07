@@ -15,7 +15,7 @@ typedef struct {
     Region* regions;
 } Arena;
 
-Allocator arena_create(void);
+LoyResult arena_create(Allocator* out);
 void arena_destroy(Arena* arena);
 void arena_reset(Arena* arena);
 

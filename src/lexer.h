@@ -15,6 +15,8 @@ typedef enum {
     TOKEN_COMMA,
     TOKEN_FUN,
 
+    TOKEN_RETURN,
+
     TOKEN_INT,
     TOKEN_FLOAT,
     TOKEN_SEMI,
@@ -42,7 +44,15 @@ typedef struct {
     u64    pos;
 } TokenStream;
 
-TokenStream lexer_tokenize_file(Allocator* allocator, StringSlice file);
+LoyResult lexer_tokenize_file(
+    TokenStream* stream,
+    Allocator* allocator,
+    CompileContext* ctx,
+    StringSlice file
+);
+
+const char* lexer_fmt_token_kind(TokenKind kind);
+
 char* lexer_fmt_token(Allocator* allocator, void* item, u64 indentation);
 void lexer_destroy(TokenStream* stream);
 

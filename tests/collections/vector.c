@@ -5,7 +5,8 @@
 #include "../../src/mem/arena.h"
 
 TestResult test_vector_initialization(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     Vector vec = vector_create(&allocator);
     test_assert(vec.buf == NULL);
     test_assert(vec.cap == 0);
@@ -15,7 +16,8 @@ TestResult test_vector_initialization(void) {
 }
 
 TestResult test_vector_growth(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     Vector vec = vector_create(&allocator);
     test_assert(vec.cap == 0);
     vector_push(&vec, 0ull);
@@ -37,7 +39,8 @@ TestResult test_vector_growth(void) {
 }
 
 TestResult test_vec_push_ptr(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     Vector vec = vector_create(&allocator);
     const char* words[] = { "alpha", "beta", "gamma" };
 
@@ -56,7 +59,8 @@ TestResult test_vec_push_ptr(void) {
 }
 
 TestResult test_vector_iterator(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     Vector vec = vector_create(&allocator);
     for(u64 i = 0; i < 5; i++) {
         vector_push(&vec, i);
@@ -82,7 +86,8 @@ TestResult test_vector_iterator(void) {
 }
 
 TestResult test_vector_push_and_get(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     Vector vec = vector_create(&allocator);
 
     for(u64 i = 0; i < 10; i++) {

@@ -65,7 +65,6 @@ void string_builder_write_format(StringBuilder* builder, const char* fmt, ...) {
     va_end(args);
 
     string_builder_write_string(builder, dynamic);
-    free(dynamic);
 }
 
 void string_builder_indent(StringBuilder* builder, u64 indentation) {

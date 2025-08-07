@@ -19,10 +19,12 @@ typedef enum {
     AST_NODE_INT_LITERAL,
     AST_NODE_UINT_LITERAL,
     AST_NODE_FLOAT_LITERAL,
+    AST_NODE_RETURN,
 } AstNodeKind;
 
 typedef struct {
     AstNodeKind kind;
+    ByteOffset  byte_offset;
 } AstNodeTag;
 
 typedef AstNodeTag AstNode;
@@ -49,6 +51,11 @@ typedef struct {
     AstIdentNode* ident;
     AstTypeNode*  type;
 } AstFunArgNode;
+
+typedef struct {
+    AstNodeTag tag;
+    AstNode*   return_value;
+} AstReturnNode;
 
 typedef struct {
     AstNodeTag    tag;
@@ -83,16 +90,18 @@ typedef struct {
     AstNodeTag tag;
     AstNode*   lhs;
     AstNode*   rhs;
+    TokenKind  op;
 } AstBinaryOpNode;
 
 typedef struct {
     Statements statements;
 } Ast;
 
-Ast parser_parse_token_stream(
+LoyResult parser_parse_token_stream(
+    Ast* ast,
     Allocator* allocator,
-    TokenStream* stream,
-    StringSlice file
+    CompileContext* ctx,
+    TokenStream* stream
 );
 
 char* parser_fmt_node(Allocator* allocator, void* node, u64 indentation);

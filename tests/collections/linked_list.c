@@ -3,7 +3,8 @@
 #include "../../src/mem/arena.h"
 
 TestResult test_insert_idx(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
     u64 first = 1;
     u64 second = 2;
@@ -27,7 +28,8 @@ TestResult test_insert_idx(void) {
 }
 
 TestResult test_insert_head(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
 
     u64 first = 1;
@@ -50,7 +52,8 @@ TestResult test_insert_head(void) {
 }
 
 TestResult test_insert_tail(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
 
     u64 first = 1;
@@ -73,7 +76,8 @@ TestResult test_insert_tail(void) {
 }
 
 TestResult test_get_idx_existing(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
     u64 first = 1;
     u64 second = 2;
@@ -95,7 +99,8 @@ TestResult test_get_idx_existing(void) {
 }
 
 TestResult test_get_idx_null(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
     u64 first = 1;
     u64 second = 2;
@@ -115,7 +120,8 @@ TestResult test_get_idx_null(void) {
 }
 
 TestResult test_remove_idx_first(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
     u64 first = 1;
     u64 second = 2;
@@ -141,7 +147,8 @@ TestResult test_remove_idx_first(void) {
 }
 
 TestResult test_remove_idx_middle(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
     u64 first = 1;
     u64 second = 2;
@@ -167,7 +174,8 @@ TestResult test_remove_idx_middle(void) {
 }
 
 TestResult test_remove_head(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
     u64 first = 1;
     u64 second = 2;
@@ -193,7 +201,8 @@ TestResult test_remove_head(void) {
 }
 
 TestResult test_remove_tail(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     LinkedList list = linked_list_create(&allocator);
     u64 first = 1;
     u64 second = 2;

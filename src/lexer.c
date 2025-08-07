@@ -13,6 +13,7 @@ typedef struct {
 static Keyword keywords[] = {
     { "let", TOKEN_LET },
     { "fun", TOKEN_FUN },
+    { "return", TOKEN_RETURN },
 };
 
 static TokenKind lookup_keyword(const char* ident) {
@@ -32,7 +33,7 @@ static bool is_valid_identifier_character(char ch) {
     return is_ascii_alphanumeric(ch) || ch == '_';
 }
 
-static const char* lexer_fmt_token_kind(TokenKind kind) {
+const char* lexer_fmt_token_kind(TokenKind kind) {
     switch(kind) {
     case TOKEN_ASSIGN_ADD: return "TOKEN_ASSIGN_ADD";
     case TOKEN_EQUAL: return "TOKEN_ASSIGN";
@@ -51,6 +52,7 @@ static const char* lexer_fmt_token_kind(TokenKind kind) {
     case TOKEN_RBRACE: return "TOKEN_RPAREN";
     case TOKEN_THIN_ARROW: return "TOKEN_THIN_ARROW";
     case TOKEN_COMMA: return "TOKEN_COMMA";
+    case TOKEN_RETURN: return "TOKEN_RETURN";
     }
     return "";
 }
@@ -71,11 +73,7 @@ char* lexer_fmt_token(Allocator* allocator, void* item, u64 indentation) {
 
     string_builder_indent(&builder, indentation);
     string_builder_write_string(&builder, ".byte_offset = ");
-    char* byte_offset = fmt_byte_offset(
-        allocator,
-        token->byte_offset,
-        indentation
-    );
+    char* byte_offset = fmt_byte_offset(allocator, token->byte_offset, indentation);
     string_builder_write_string(&builder, byte_offset);
     string_builder_write_string(&builder, ",\n");
 
@@ -165,7 +163,12 @@ static void consume_until_newline(StringChars* chars) {
     }
 }
 
-TokenStream lexer_tokenize_file(Allocator* allocator, StringSlice file) {
+LoyResult lexer_tokenize_file(
+    TokenStream* stream,
+    Allocator* allocator,
+    CompileContext* ctx,
+    StringSlice file
+) {
     StringChars chars = string_slice_chars(file);
     Vector tokens = vector_create(allocator);
 
@@ -274,13 +277,26 @@ TokenStream lexer_tokenize_file(Allocator* allocator, StringSlice file) {
             continue;
         }
 
-        fprintf(stderr, "Syntax error: invalid token `%c`\n", curr);
-        ByteOffset offset = { .start = chars.cursor - 1, .end = chars.cursor };
-        Location loc = location_from_byte_offset(file, offset);
-        fprintf(stderr, "@ line: %lu, column: %lu\n", loc.line, loc.column);
-        exit(EXIT_FAILURE);
+        ByteOffset offset = {
+            .start = chars.cursor - 1,
+            .end = chars.cursor,
+        };
+
+        Span span = {
+            .file = file,
+            .offset = offset,
+            .label = "Unknown token",
+            .level = SPAN_ERROR,
+            .info = "Unexpected character",
+        };
+
+        if(error_report_push_span(&ctx->report, span) != LOY_OK) {
+            return LOY_ERROR_ALLOC;
+        }
+
+        return LOY_ERROR_LEXER_INVALID_TOKEN;
     }
 
-    TokenStream stream = { .tokens = tokens };
-    return stream;
+    stream->tokens = tokens;
+    return LOY_OK;
 }

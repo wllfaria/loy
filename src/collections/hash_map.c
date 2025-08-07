@@ -206,7 +206,6 @@ void hash_map_inspect(
             string_builder_indent(&builder, 1);
             string_builder_write_string(&builder, formatted_entry);
             string_builder_write_string(&builder, ",\n");
-            free(formatted_entry);
         }
     }
     string_builder_write_string(&builder, "}\n");

@@ -146,7 +146,6 @@ void vector_inspect(Allocator* allocator, Vector* vec, FmtFn fmt_fn) {
         char* formatted_item = fmt_fn(allocator, raw, 2);
         string_builder_write_string(&builder, formatted_item);
         string_builder_write_string(&builder, i < vec->len - 1 ? ",\n" : "\n");
-        // free(formatted_item);
     }
 
     string_builder_write_string(&builder, "    ],\n");

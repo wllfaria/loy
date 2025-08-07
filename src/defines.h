@@ -20,17 +20,55 @@ typedef long  i64;
 typedef float  f32;
 typedef double f64;
 
+typedef enum {
+    LOY_OK = 0,
+    LOY_ERROR_ALLOC,
+    LOY_ERROR_IO,
+    LOY_ERROR_LEXER_INVALID_TOKEN,
+    LOY_ERROR_PARSER_INVALID_TOKEN,
+} LoyResult;
+
 #define LOY_MAX(a, b) (a > b ? a : b)
 #define LOY_MIN(a, b) (a < b ? a : b)
 
-#define LOY_ASSERT(cond, msg)                                 \
-    do {                                                      \
-        if(!(cond)) {                                         \
-            fprintf(stderr, "Assertion failed: %s\n", msg);   \
-            fprintf(stderr, "@ %s:%d\n", __FILE__, __LINE__); \
-            exit(EXIT_FAILURE);                               \
-        }                                                     \
-    } while(0)                                                \
+#define LOY_BAIL(msg)               \
+    do {                            \
+        fprintf(stderr, "%s", msg); \
+        exit(EXIT_FAILURE);         \
+    } while(0)
+
+#define LOY_ASSERT(cond, ...)                                  \
+    do {                                                       \
+        if(!(cond)) {                                          \
+            fprintf(stderr, "Assertion failed: ");             \
+            if(*#__VA_ARGS__) fprintf(stderr, "" __VA_ARGS__); \
+            fprintf(stderr, "\n");                             \
+            fprintf(stderr, "@ %s:%d\n", __FILE__, __LINE__);  \
+            exit(EXIT_FAILURE);                                \
+        }                                                      \
+    } while(0)                                                 \
+
+#define LOY_ASSERT_EQ(left, right, ...)                            \
+    do {                                                           \
+        if((left) != (right)) {                                    \
+            fprintf(stderr, "Assertion `left == right` failed: "); \
+            if(*#__VA_ARGS__) fprintf(stderr, "" __VA_ARGS__);     \
+            fprintf(stderr, "\n");                                 \
+            fprintf(stderr, "@ %s:%d\n", __FILE__, __LINE__);      \
+            exit(EXIT_FAILURE);                                    \
+        }                                                          \
+    } while(0)
+
+#define LOY_ASSERT_NE(left, right, ...)                            \
+    do {                                                           \
+        if((left) == (right)) {                                    \
+            fprintf(stderr, "Assertion `left != right` failed: "); \
+            if(*#__VA_ARGS__) fprintf(stderr, "" __VA_ARGS__);     \
+            fprintf(stderr, "\n");                                 \
+            fprintf(stderr, "@ %s:%d\n", __FILE__, __LINE__);      \
+            exit(EXIT_FAILURE);                                    \
+        }                                                          \
+    } while(0)
 
 #define ARRAY_LEN(arr) sizeof(arr) / sizeof(arr[0])
 

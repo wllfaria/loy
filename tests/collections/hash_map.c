@@ -4,7 +4,8 @@
 #include "../../src/mem/arena.h"
 
 TestResult test_hash_map_initialization(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     HashMap hash_map = hash_map_create(&allocator);
     hash_map_insert(&hash_map, "first", 5, "first");
 
@@ -17,7 +18,8 @@ TestResult test_hash_map_initialization(void) {
 }
 
 TestResult test_hash_map_growth(void) {
-    Allocator allocator = arena_create();
+    Allocator allocator;
+    if(arena_create(&allocator) != LOY_OK) return TEST_FAIL;
     HashMap hash_map = hash_map_create(&allocator);
     test_assert(hash_map.bucket_count == 0); // assert no allocations without a insert
 

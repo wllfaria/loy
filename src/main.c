@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "defines.h"
+#include "error.h"
 #include "lexer.h"
 #include "parser.h"
 #include "string/string_slice.h"
@@ -7,58 +9,87 @@
 #include "mem/allocator.h"
 #include "typer.h"
 
-StringSlice read_file(Arena* arena, const char* path) {
-    FILE* file = fopen(path, "r");
+static CompileContext compile_context_create(
+    Allocator* allocator,
+    CompilationUnit unit
+) {
+    CompileContext ctx = {
+        .report = { .spans = vector_create(allocator) },
+        .unit = unit,
+    };
 
-    if(!file) {
-        perror("failed to open file");
-        exit(EXIT_FAILURE);
-    }
+    return ctx;
+}
+
+LoyResult read_file(StringSlice* out, Arena* arena, const char* path) {
+    FILE* file = fopen(path, "r");
+    if(file == NULL) return LOY_ERROR_IO;
 
     fseek(file, 0, SEEK_END);
     u64 length = (u64)ftell(file);
     rewind(file);
 
-    // Allocate memory for content + null terminator
     char* buffer = arena_alloc_many(arena, char, length + 1);
-    if(!buffer) {
-        perror("failed to read file");
-        fclose(file);
-        exit(EXIT_FAILURE);
-    }
+    if(buffer == NULL) return LOY_ERROR_ALLOC;
 
     u64 read = fread(buffer, 1, length, file);
-    if(read != length) {
-        fprintf(stderr, "failed to read entire file\n");
-        fclose(file);
-        exit(EXIT_FAILURE);
-    }
+    if(read != length) return LOY_ERROR_IO;
 
     buffer[read] = '\0'; // Null terminate the buffer
     fclose(file);
 
-    return string_slice_create(buffer);
+    *out = string_slice_create(buffer);
+    return LOY_OK;
 }
 
 int main(void) {
-    Arena* file_arena = (Arena*)(arena_create().ctx);
-    StringSlice file = read_file(file_arena, "samples/operators.loy");
+    Allocator compile_alloc, lexer_alloc, parser_alloc, typer_alloc;
+    LoyResult file_alloc_result = arena_create(&compile_alloc);
+    LoyResult lexer_alloc_result = arena_create(&lexer_alloc);
+    LoyResult parser_alloc_result = arena_create(&parser_alloc);
+    LoyResult typer_alloc_result = arena_create(&typer_alloc);
 
-    Allocator lexer_arena = arena_create();
-    TokenStream stream = lexer_tokenize_file(&lexer_arena, file);
+    if(
+        file_alloc_result != LOY_OK ||
+        lexer_alloc_result != LOY_OK ||
+        parser_alloc_result != LOY_OK ||
+        typer_alloc_result != LOY_OK
+    ) {
+        fprintf(stderr, "Failed to setup arenas");
+        goto cleanup;
+    }
 
-    Allocator parser_arena = arena_create();
-    Ast ast = parser_parse_token_stream(&parser_arena, &stream, file);
+    const char* path = "samples/operators.loy";
+    StringSlice file;
+    if(read_file(&file, compile_alloc.ctx, path) != LOY_OK) {
+        fprintf(stderr, "Failed to read file");
+        goto cleanup;
+    }
 
-    // vector_inspect(&lexer_arena, &stream.tokens, lexer_fmt_token);
-    // vector_inspect(&parser_arena, &ast.statements, parser_fmt_node);
+    CompilationUnit unit = {
+        .content = file,
+        .path = path,
+        .relative_path = path,
+    };
 
-    Allocator typer_arena = arena_create();
-    typer_typecheck_ast(&typer_arena, ast);
+    CompileContext ctx = compile_context_create(&compile_alloc, unit);
 
-    arena_destroy(file_arena);
-    arena_destroy(lexer_arena.ctx);
-    arena_destroy(parser_arena.ctx);
-    arena_destroy(typer_arena.ctx);
+    TokenStream stream = { 0 };
+    if(lexer_tokenize_file(&stream, &lexer_alloc, &ctx, file) != LOY_OK) goto cleanup;
+
+    Ast ast = { .statements = vector_create(&parser_alloc) };
+    LoyResult parser_result = parser_parse_token_stream(&ast, &parser_alloc, &ctx, &stream);
+    if(parser_result != LOY_OK) goto cleanup;
+
+    TypedAst typed_ast = { .statements = vector_create(&typer_alloc) };
+    if(typer_typecheck_ast(&ctx, &typed_ast, &typer_alloc, ast) != LOY_OK) goto cleanup;
+
+cleanup:
+    error_report_print(&ctx.report);
+    arena_destroy(compile_alloc.ctx);
+    arena_destroy(lexer_alloc.ctx);
+    arena_destroy(parser_alloc.ctx);
+    arena_destroy(typer_alloc.ctx);
+
     return 0;
 }

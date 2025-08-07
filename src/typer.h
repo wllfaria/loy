@@ -13,6 +13,7 @@ typedef enum {
     TYPE_USIZE,
     TYPE_ISIZE,
     TYPE_INT,
+    TYPE_VOID,
 } TypeKind;
 
 typedef struct {
@@ -45,6 +46,10 @@ typedef struct {
 } TypeInt;
 
 typedef struct {
+    TypeKind kind;
+} TypeVoid;
+
+typedef struct {
     const char* name;
     Type*       type;
 } PrimitiveTypeEntry;
@@ -58,10 +63,12 @@ typedef enum {
     TYPED_NODE_LET_BINDING,
     TYPED_NODE_IDENT,
     TYPED_NODE_FUN_CALL,
+    TYPED_NODE_RETURN,
 } TypedNodeKind;
 
 typedef struct {
     TypedNodeKind kind;
+    ByteOffset    byte_offset;
 } TypedNodeTag;
 
 typedef struct {
@@ -99,6 +106,12 @@ typedef struct {
 } TypedLetBinding;
 
 typedef struct {
+    TypedNodeTag tag;
+    Type*        return_type;
+    TypedNode*   return_value;
+} TypedReturn;
+
+typedef struct {
     TypedNodeTag    tag;
     char*           ident;
     TypedStatements args;
@@ -119,10 +132,15 @@ typedef struct {
 } FunctionDecl;
 
 typedef struct {
+    TypedStatements block;
+    Type*           return_type;
+} TypedBlock;
+
+typedef struct {
     TypedNodeTag    tag;
     char*           ident;
     TypedStatements args;
-    TypedStatements body;
+    TypedBlock      body;
     Type*           return_type;
 } TypedFunction;
 
@@ -141,9 +159,11 @@ typedef struct {
     i64     parent;
 } Scope;
 
-// static void typer_typecheck_ast_node(AstNode* node);
-// static void typer_typecheck_function(AstFunNode* node);
-
-void typer_typecheck_ast(Allocator* allocator, Ast ast);
+LoyResult typer_typecheck_ast(
+    CompileContext* ctx,
+    TypedAst* typed_ast,
+    Allocator* allocator,
+    Ast ast
+);
 
 #endif
