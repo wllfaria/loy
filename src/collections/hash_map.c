@@ -89,10 +89,7 @@ static HashMapEntry* hash_map_entry_create(
     u64 key_hash,
     void* value
 ) {
-    HashMapEntry* entry = map->allocator->alloc(
-        map->allocator->ctx,
-        sizeof(HashMapEntry)
-    );
+    HashMapEntry* entry = map->allocator->alloc(map->allocator->ctx, sizeof(HashMapEntry));
     entry->key = key;
     entry->key_len = key_len;
     entry->hash = key_hash;

@@ -1059,6 +1059,7 @@ static TypedIdent* typer_typecheck_ident(
     if(typed_ident == NULL) return NULL;
 
     typed_ident->tag.kind = TYPED_NODE_IDENT;
+    typed_ident->name = ident->name;
     typed_ident->type = type;
     return typed_ident;
 }
@@ -1113,6 +1114,28 @@ static TypedReturn* typer_typecheck_return(
     return typed_return;
 }
 
+static TypedFunArg* typer_typecheck_fun_arg(
+    Allocator* allocator,
+    CompileContext* compile_ctx,
+    TyperContext* ctx,
+    AstFunArgNode* node,
+    Type* expected_type
+) {
+    (void)compile_ctx;
+    char* type_name = node->type->ident->name;
+    Type* arg_type = hash_map_get(&ctx->type_decl, type_name, strlen(type_name));
+    if(!typer_type_equals(arg_type, expected_type)) {
+        UNREACHABLE();
+    }
+
+    TypedFunArg* arg = allocator->alloc(allocator->ctx, sizeof(TypedFunArg));
+    if(arg == NULL) UNREACHABLE();
+    arg->tag.kind = TYPED_NODE_FUN_ARG;
+    arg->ident = node->ident->name;
+    arg->type = arg_type;
+    return arg;
+}
+
 static TypedNode* typer_typecheck_node(
     Allocator* allocator,
     CompileContext* compile_ctx,
@@ -1156,8 +1179,11 @@ static TypedNode* typer_typecheck_node(
         AstReturnNode* return_node = (AstReturnNode*)node;
         return (TypedNode*)typer_typecheck_return(allocator, compile_ctx, ctx, return_node, expected_type);
     }
+    case AST_NODE_FUN_ARG: {
+        AstFunArgNode* arg = (AstFunArgNode*)node;
+        return (TypedNode*)typer_typecheck_fun_arg(allocator, compile_ctx, ctx, arg, expected_type);
+    }
     case AST_NODE_FUN:
-    case AST_NODE_FUN_ARG:
     case AST_NODE_BINARY_OP:
     case AST_NODE_TYPE_ANNOTATION:
         break;
@@ -1173,10 +1199,6 @@ static TypedFunction* typer_typecheck_function(
     AstFunNode* fun
 ) {
     typer_scope_push(allocator, ctx);
-    TypedBlock typed_body = {
-        .block = vector_create(allocator),
-        .return_type = (Type*)&type_void,
-    };
 
     TypedNode* typed_return = typer_typecheck_node(
         allocator,
@@ -1199,6 +1221,29 @@ static TypedFunction* typer_typecheck_function(
         error_report_push_span(&compile_ctx->report, span);
         return NULL;
     }
+
+    char* fun_name = fun->ident->name;
+    FunctionDecl* signature = hash_map_get(&ctx->functions, fun_name, strlen(fun_name));
+
+    Vector typed_args = vector_create(allocator);
+    for(u64 i = 0; i < fun->args.len; i++) {
+        TypedFunArg* arg_signature = (TypedFunArg*)vector_get(&signature->args, i);
+        AstFunArgNode* ast_arg = (AstFunArgNode*)vector_get(&fun->args, i);
+        TypedFunArg* typed_arg = (TypedFunArg*)typer_typecheck_node(
+            allocator,
+            compile_ctx,
+            ctx,
+            (AstNode*)ast_arg,
+            arg_signature->type
+        );
+        if(typed_arg == NULL) return NULL;
+        vector_push_ptr(&typed_args, typed_arg);
+    }
+
+    TypedBlock typed_body = {
+        .block = vector_create(allocator),
+        .return_type = (Type*)&type_void,
+    };
 
     VectorIter body_iter = vector_iter(&fun->body);
     while(vector_iter_peek(&body_iter) != NULL) {
@@ -1256,7 +1301,7 @@ static TypedFunction* typer_typecheck_function(
     function->tag.kind = TYPED_NODE_FUN;
     function->tag.byte_offset = fun->tag.byte_offset;
     function->ident = fun->ident->name;
-    function->args = vector_create(allocator);
+    function->args = typed_args;
     function->body = typed_body;
     function->return_type = return_type;
 

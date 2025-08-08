@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <llvm-c/Core.h>
 
 #include "defines.h"
 #include "error.h"
@@ -8,6 +9,7 @@
 #include "mem/arena.h"
 #include "mem/allocator.h"
 #include "typer.h"
+#include "codegen.h"
 
 static CompileContext compile_context_create(
     Allocator* allocator,
@@ -83,6 +85,10 @@ int main(void) {
 
     TypedAst typed_ast = { .statements = vector_create(&typer_alloc) };
     if(typer_typecheck_ast(&ctx, &typed_ast, &typer_alloc, ast) != LOY_OK) goto cleanup;
+
+    LLVMModuleRef module = LLVMModuleCreateWithName("main");
+    LLVMContextRef context = LLVMGetGlobalContext();
+    cogeden_generate_llvm_ir(&parser_alloc, module, context, &typed_ast);
 
 cleanup:
     error_report_print(&ctx.report);

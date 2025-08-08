@@ -60,6 +60,8 @@ fn buildCompiler(
     });
 
     loy.linkLibC();
+    loy.addIncludePath(.{ .cwd_relative = "/usr/include" });
+    loy.linkSystemLibrary("LLVM-20");
     return loy;
 }
 
@@ -85,6 +87,8 @@ pub fn buildTests(
     });
 
     tests.linkLibC();
+    tests.addIncludePath(.{ .cwd_relative = "/usr/include" });
+    tests.linkSystemLibrary("LLVM-20");
     return tests;
 }
 

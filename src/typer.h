@@ -78,6 +78,7 @@ typedef struct {
 typedef struct {
     TypedNodeTag tag;
     Type*        type;
+    char*        name;
 } TypedIdent;
 
 typedef struct {

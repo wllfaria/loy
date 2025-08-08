@@ -1,8 +1,4 @@
-fun one(pi: f32, distance: i32) -> u8 {
-}
-
-fun other(argA: usize, argB: i32) -> usize {
-    let pi: f32 = 3.1415;
-    let distance: i32 = -2147483648;
-    let call: u8 = one(pi, distance, a);
+fun add(a: i64, b: i64) -> i64 {
+    let result: i64 = 10;
+    return result;
 }
