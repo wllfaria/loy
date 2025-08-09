@@ -64,6 +64,7 @@ typedef enum {
     TYPED_NODE_IDENT,
     TYPED_NODE_FUN_CALL,
     TYPED_NODE_RETURN,
+    TYPED_NODE_BINARY_OP,
 } TypedNodeKind;
 
 typedef struct {
@@ -92,6 +93,14 @@ typedef struct {
     TypeInt*     type;
     i64          value;
 } TypedInt;
+
+typedef struct {
+    TypedNodeTag tag;
+    Type*        type;
+    TypedNode*   lhs;
+    TypedNode*   rhs;
+    TokenKind    op;
+} TypedBinaryOp;
 
 typedef struct {
     TypedNodeTag tag;
@@ -166,5 +175,7 @@ LoyResult typer_typecheck_ast(
     Allocator* allocator,
     Ast ast
 );
+
+char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation);
 
 #endif

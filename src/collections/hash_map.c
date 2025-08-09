@@ -5,7 +5,6 @@
 #include "hash_map.h"
 #include "linked_list.h"
 #include "../string/string_builder.h"
-#include "../mem/arena.h"
 
 #define MIN_MAP_BUCKET_SIZE 16
 #define MAP_GROW_THRESHOLD  2.5

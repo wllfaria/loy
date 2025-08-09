@@ -1,4 +1,8 @@
 fun add(a: i64, b: i64) -> i64 {
-    let result: i64 = 10;
+    let result: i64 = a + b;
     return result;
+}
+
+fun main() -> i64 {
+    return add(1, 2);
 }

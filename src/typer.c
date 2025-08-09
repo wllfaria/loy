@@ -94,6 +94,8 @@ static const u64 primitive_count = ARRAY_LEN(primitives);
 static char* format_type(Allocator* allocator, Type* type) {
     StringBuilder builder = string_builder_create(allocator);
 
+    if(type == NULL) return "void";
+
     switch(type->kind) {
     case TYPE_INVALID: {
         string_builder_write_string(&builder, "unknown");
@@ -134,6 +136,8 @@ static char* format_type(Allocator* allocator, Type* type) {
 char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
     TypedNode* node = (TypedNode*)item;
     StringBuilder builder = string_builder_create(allocator);
+
+    if(node == NULL) return "NULL";
 
     switch(node->tag.kind) {
     case TYPED_NODE_FUN: {
@@ -285,7 +289,19 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
     case TYPED_NODE_IDENT: {
         TypedIdent* ident = (TypedIdent*)node;
         char* type = format_type(allocator, ident->type);
-        string_builder_write_format(&builder, "\"%s\"", type);
+
+        string_builder_write_string(&builder, "TypedIdent{\n");
+        indentation++;
+        string_builder_indent(&builder, indentation);
+        string_builder_write_format(&builder, ".name = \"%s\",\n", ident->name);
+
+        string_builder_indent(&builder, indentation);
+        string_builder_write_format(&builder, ".type = \"%s\",\n", type);
+        indentation--;
+
+        string_builder_indent(&builder, indentation);
+        string_builder_write_string(&builder, "}");
+
         break;
     }
     case TYPED_NODE_RETURN: {
@@ -296,7 +312,7 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
 
         string_builder_indent(&builder, indentation);
         char* return_value = typer_fmt_node(allocator, typed_return->return_value, indentation);
-        string_builder_write_format(&builder, ".return_value = \"%s\"\n", return_value);
+        string_builder_write_format(&builder, ".return_value = %s,\n", return_value);
 
         string_builder_indent(&builder, indentation);
         char* return_type = format_type(allocator, typed_return->return_type);
@@ -311,6 +327,8 @@ char* typer_fmt_node(Allocator* allocator, void* item, u64 indentation) {
     case TYPED_NODE_FUN_ARG: {
         break;
     }
+    case TYPED_NODE_BINARY_OP:
+        break;
     }
 
     return string_builder_to_string(&builder);
@@ -601,6 +619,10 @@ static Type* typer_get_node_type(TypedNode* node) {
     case TYPED_NODE_RETURN: {
         TypedReturn* typed_return = (TypedReturn*)node;
         return typed_return->return_type;
+    }
+    case TYPED_NODE_BINARY_OP: {
+        TypedBinaryOp* binop = (TypedBinaryOp*)node;
+        return binop->type;
     }
     case TYPED_NODE_FUN_ARG:
         break;
@@ -1000,7 +1022,7 @@ static TypedFunCall* typer_typecheck_fun_call(
         vector_push_ptr(&typed_args, typed_arg);
     }
 
-    if(!typer_type_equals(signature->return_type, expected_type)) {
+    if(expected_type != NULL && !typer_type_equals(signature->return_type, expected_type)) {
         char* expected_name = format_type(allocator, expected_type);
         char* actual_name = format_type(allocator, signature->return_type);
 
@@ -1136,6 +1158,74 @@ static TypedFunArg* typer_typecheck_fun_arg(
     return arg;
 }
 
+static Type* get_expected_op_type(TokenKind op, Type* lhs_type) {
+    switch(op) {
+    case TOKEN_PLUS: return lhs_type;
+    case TOKEN_EQUAL:
+    case TOKEN_COLON:
+    case TOKEN_ASSIGN_ADD:
+    case TOKEN_IDENT:
+    case TOKEN_LET:
+    case TOKEN_COMMA:
+    case TOKEN_FUN:
+    case TOKEN_RETURN:
+    case TOKEN_INT:
+    case TOKEN_FLOAT:
+    case TOKEN_SEMI:
+    case TOKEN_LPAREN:
+    case TOKEN_RPAREN:
+    case TOKEN_LBRACE:
+    case TOKEN_RBRACE:
+    case TOKEN_THIN_ARROW:
+
+    case TOKEN_PLUS_PLUS:
+        break;
+    }
+
+    return (Type*)&type_void;
+}
+
+static TypedBinaryOp* typer_typecheck_binary_op(
+    Allocator* allocator,
+    CompileContext* compile_ctx,
+    TyperContext* ctx,
+    AstBinaryOpNode* node,
+    Type* expected_type
+) {
+    (void)compile_ctx;
+
+    TypedNode* lhs = typer_typecheck_node(
+        allocator,
+        compile_ctx,
+        ctx,
+        node->lhs,
+        expected_type
+    );
+
+    Type* lhs_type = typer_get_node_type(lhs);
+    Type* expected_op_type = get_expected_op_type(node->op, lhs_type);
+    if(!typer_type_equals(lhs_type, expected_op_type)) exit(1);
+
+    TypedNode* rhs = typer_typecheck_node(
+        allocator,
+        compile_ctx,
+        ctx,
+        node->rhs,
+        expected_op_type
+    );
+    Type* rhs_type = typer_get_node_type(rhs);
+    if(!typer_type_equals(rhs_type, expected_op_type)) exit(1);
+
+    TypedBinaryOp* binop = allocator->alloc(allocator->ctx, sizeof(TypedBinaryOp));
+    binop->tag.kind = TYPED_NODE_BINARY_OP;
+    binop->tag.byte_offset = byte_offset_merge(lhs->tag.byte_offset, rhs->tag.byte_offset);
+    binop->lhs = lhs;
+    binop->rhs = rhs;
+    binop->op = node->op;
+    binop->type = expected_op_type;
+    return binop;
+}
+
 static TypedNode* typer_typecheck_node(
     Allocator* allocator,
     CompileContext* compile_ctx,
@@ -1183,8 +1273,11 @@ static TypedNode* typer_typecheck_node(
         AstFunArgNode* arg = (AstFunArgNode*)node;
         return (TypedNode*)typer_typecheck_fun_arg(allocator, compile_ctx, ctx, arg, expected_type);
     }
+    case AST_NODE_BINARY_OP: {
+        AstBinaryOpNode* binop = (AstBinaryOpNode*)node;
+        return (TypedNode*)typer_typecheck_binary_op(allocator, compile_ctx, ctx, binop, expected_type);
+    }
     case AST_NODE_FUN:
-    case AST_NODE_BINARY_OP:
     case AST_NODE_TYPE_ANNOTATION:
         break;
     }
@@ -1237,6 +1330,7 @@ static TypedFunction* typer_typecheck_function(
             arg_signature->type
         );
         if(typed_arg == NULL) return NULL;
+        typer_scope_add_symbol(ctx, typed_arg->ident, typed_arg->type);
         vector_push_ptr(&typed_args, typed_arg);
     }
 
@@ -1246,7 +1340,7 @@ static TypedFunction* typer_typecheck_function(
     };
 
     VectorIter body_iter = vector_iter(&fun->body);
-    while(vector_iter_peek(&body_iter) != NULL) {
+    while(vector_iter_peek(&body_iter)) {
         AstNode* node = (AstNode*)vector_iter_next(&body_iter);
 
         switch(node->kind) {
@@ -1372,9 +1466,11 @@ LoyResult typer_typecheck_ast(
         return LOY_ERROR_PARSER_INVALID_TOKEN;
     }
 
-    hash_map_inspect(allocator, &ctx.type_decl, format_type_decl);
-    hash_map_inspect(allocator, &ctx.functions, format_fun_decl);
-    vector_inspect(allocator, &typed_ast->statements, typer_fmt_node);
+    // hash_map_inspect(allocator, &ctx.type_decl, format_type_decl);
+    // hash_map_inspect(allocator, &ctx.functions, format_fun_decl);
+    (void)format_type_decl;
+    (void)format_fun_decl;
+    // vector_inspect(allocator, &typed_ast->statements, typer_fmt_node);
 
     return LOY_OK;
 }
