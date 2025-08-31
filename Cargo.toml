@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = ["piller-lexer"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["wiru <hello@wiru.st>"]
+repository = "https://github.com/wllfaria/piller"
+
+[workspace.dependencies]
+piller-lexer = { path = "piller-lexer" }
+thiserror = "2.0.16"
+
+[package]
+name = "scratch"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+piller-lexer.workspace = true
