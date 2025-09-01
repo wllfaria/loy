@@ -1,0 +1,17 @@
+type Name = struct {
+    name: i8,
+}
+
+fun function_name() -> Name {
+    const some_item = -10;
+    const some_function_result = calling_function(some_item);
+    const returning_control_flow = if { 10 } else { 20 };
+
+    if returning_control_flow == 10 {
+        Name { .name = some_function_result }
+    } else {
+        Name { .name = some_item }
+    }
+}
+
+// some comment

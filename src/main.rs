@@ -5,8 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     };
 
-    let file_contents = std::fs::read_to_string(&filename)?;
-
+    let file_contents = std::fs::read_to_string(filename)?;
     let mut lexer = piller_lexer::Lexer::new(&file_contents);
     let tokens = lexer.lex()?;
 
