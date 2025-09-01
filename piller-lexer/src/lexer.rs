@@ -88,6 +88,7 @@ impl<'src> Lexer<'src> {
                 ('<', Some('='), _) => self.double_token(TokenKind::LesserEqual, byte_pos),
                 ('>', Some('='), _) => self.double_token(TokenKind::GreaterEqual, byte_pos),
 
+                ('/', Some('*'), _) => self.take_multiline_comment(byte_pos)?,
                 ('/', Some('/'), _) => self.take_single_line_comment(byte_pos),
                 ('-', Some('>'), _) => self.double_token(TokenKind::ThinArrow, byte_pos),
                 ('-', Some('0'..='9'), _) => self.take_number(byte_pos)?,
@@ -188,6 +189,35 @@ impl<'src> Lexer<'src> {
     fn take_single_line_comment(&mut self, start: usize) -> Token {
         let end = self.take_while(|ch| !matches!(ch, '\n'), start);
         TokenKind::Comment.into_token((start, end + 1))
+    }
+
+    /// Parses a multi-line comment
+    fn take_multiline_comment(&mut self, start: usize) -> Result<Token> {
+        self.next(); // consuming the * from /*
+        let mut open_comments = 1;
+
+        loop {
+            let Some((byte_pos, curr)) = self.next() else {
+                return Err(Error::UnterminatedMultilineComment);
+            };
+
+            let next = self.peek().map(|(_, ch)| ch);
+            match (curr, next) {
+                ('/', Some('*')) => {
+                    self.next();
+                    open_comments += 1;
+                }
+                ('*', Some('/')) => {
+                    self.next();
+                    open_comments -= 1;
+                }
+                _ => {}
+            }
+
+            if open_comments == 0 {
+                break Ok(TokenKind::Comment.into_token((start, byte_pos + 1)));
+            }
+        }
     }
 
     /// Parses a documentation comment

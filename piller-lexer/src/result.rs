@@ -12,4 +12,6 @@ pub enum Error {
     UnexpectedEof,
     #[error("unterminated string literal")]
     UnterminatedString,
+    #[error("unterminated multiline comment")]
+    UnterminatedMultilineComment,
 }

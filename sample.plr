@@ -1,3 +1,7 @@
+type<T> Name = struct {
+    field: T
+}
+
 type Name = struct {
     name: i8,
 }
@@ -14,4 +18,10 @@ fun function_name() -> Name {
     }
 }
 
-// some comment
+// some regular comment
+/// some doc domment
+/* 
+    Some multiline
+    /* with nesting */
+    comment
+*/
