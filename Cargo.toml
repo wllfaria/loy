@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "piller-lexer",
+    "piller-parser",
 ]
 
 [workspace.package]
@@ -13,7 +14,9 @@ repository = "https://github.com/wllfaria/piller"
 
 [workspace.dependencies]
 piller-lexer = { path = "piller-lexer" }
+piller-parser = { path = "piller-parser" }
 thiserror = "2.0.16"
+miette = { version = "7.6.0", features = ["fancy"] }
 
 [package]
 name = "scratch"
@@ -25,3 +28,5 @@ repository.workspace = true
 
 [dependencies]
 piller-lexer.workspace = true
+piller-parser.workspace = true
+miette.workspace = true

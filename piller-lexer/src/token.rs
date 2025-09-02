@@ -3,13 +3,8 @@ pub trait DisplaySource {
     fn display_source<'a>(&self, source: &'a str) -> &'a str;
 }
 
-/// A trait for converting a value into a span
-pub trait IntoSpan {
-    fn into_span(self) -> Span;
-}
-
-impl IntoSpan for usize {
-    fn into_span(self) -> Span {
+impl Into<Span> for usize {
+    fn into(self) -> Span {
         Span {
             start: self,
             end: self,
@@ -17,8 +12,8 @@ impl IntoSpan for usize {
     }
 }
 
-impl IntoSpan for (usize, usize) {
-    fn into_span(self) -> Span {
+impl Into<Span> for (usize, usize) {
+    fn into(self) -> Span {
         let (start, end) = self;
         Span { start, end }
     }
@@ -26,7 +21,7 @@ impl IntoSpan for (usize, usize) {
 
 /// A trait for converting a value into a token
 pub trait IntoToken {
-    fn into_token(self, span: impl IntoSpan) -> Token;
+    fn into_token(self, span: impl Into<Span>) -> Token;
 }
 
 /// A span represents a range of characters in the source code
@@ -34,6 +29,15 @@ pub trait IntoToken {
 pub struct Span {
     pub start: usize,
     pub end: usize,
+}
+
+impl Span {
+    pub fn merge(&self, other: Span) -> Self {
+        Self {
+            start: self.start.min(other.start),
+            end: self.end.max(other.end),
+        }
+    }
 }
 
 /// The bit size of a numerical value
@@ -55,7 +59,7 @@ pub enum Number {
 }
 
 impl IntoToken for Number {
-    fn into_token(self, span: impl IntoSpan) -> Token {
+    fn into_token(self, span: impl Into<Span>) -> Token {
         TokenKind::Number(self).into_token(span)
     }
 }
@@ -68,6 +72,7 @@ pub enum TokenKind {
     Else,
     Type,
     Struct,
+    Enum,
     Constant,
     Function,
     Variable,
@@ -154,6 +159,7 @@ impl TokenKind {
             "else" => Self::Else,
             "type" => Self::Type,
             "struct" => Self::Struct,
+            "enum" => Self::Enum,
             "fun" => Self::Function,
             "var" => Self::Variable,
             "const" => Self::Constant,
@@ -172,13 +178,20 @@ impl TokenKind {
             _ => Self::Identifier,
         }
     }
+
+    pub fn is_primitive(&self) -> bool {
+        matches!(
+            self,
+            TokenKind::Bool(_) | TokenKind::Integer(_) | TokenKind::Unsigned(_)
+        )
+    }
 }
 
 impl IntoToken for TokenKind {
-    fn into_token(self, span: impl IntoSpan) -> Token {
+    fn into_token(self, span: impl Into<Span>) -> Token {
         Token {
             kind: self,
-            position: span.into_span(),
+            position: span.into(),
         }
     }
 }
@@ -200,11 +213,53 @@ impl DisplaySource for Token {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct TokenStream {
     inner: Vec<Token>,
+    cursor: usize,
+    eof: Span,
 }
 
 impl TokenStream {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { inner: tokens }
+        Self {
+            eof: tokens
+                .last()
+                .map(|token| token.position)
+                .expect("lexed tokens should have EOF at the end"),
+            inner: tokens,
+            cursor: 0,
+        }
+    }
+
+    pub fn next_token(&mut self) -> Token {
+        let cursor = self.cursor;
+        self.cursor = usize::min(self.cursor + 1, self.inner.len() - 1);
+        self.inner[cursor]
+    }
+
+    pub fn prev_token(&mut self) -> Token {
+        self.cursor = self.cursor.saturating_sub(1);
+        debug_assert!(!self.inner.is_empty());
+        self.inner[self.cursor]
+    }
+
+    pub fn peek_token(&self) -> Token {
+        self.inner[self.cursor]
+    }
+
+    #[allow(clippy::should_implement_trait)]
+    pub fn next(&mut self) -> TokenKind {
+        self.next_token().kind
+    }
+
+    pub fn prev(&mut self) -> TokenKind {
+        self.prev_token().kind
+    }
+
+    pub fn peek(&self) -> TokenKind {
+        self.peek_token().kind
+    }
+
+    pub fn consume(&mut self) {
+        self.next();
     }
 }
 
