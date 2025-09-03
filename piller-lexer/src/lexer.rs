@@ -74,10 +74,6 @@ impl<'src> Lexer<'src> {
                 ('+', Some('+'), _) => self.double_token(TokenKind::Increment, byte_pos),
                 ('-', Some('-'), _) => self.double_token(TokenKind::Decrement, byte_pos),
 
-                // double character bitwise operators
-                ('<', Some('<'), _) => self.double_token(TokenKind::LShift, byte_pos),
-                ('>', Some('>'), _) => self.double_token(TokenKind::RShift, byte_pos),
-
                 // double character logical operators
                 ('|', Some('|'), _) => self.double_token(TokenKind::Or, byte_pos),
                 ('&', Some('&'), _) => self.double_token(TokenKind::And, byte_pos),

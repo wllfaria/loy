@@ -78,9 +78,7 @@ fn test_lexing_precedence_triple_vs_double() {
         .collect::<Vec<_>>();
 
     assert_eq!(tokens[0].kind, TokenKind::LShiftAssign);
-    assert_eq!(tokens[1].kind, TokenKind::LShift);
     assert_eq!(tokens[2].kind, TokenKind::RShiftAssign);
-    assert_eq!(tokens[3].kind, TokenKind::RShift);
     assert!(tokens.len() == 5); // including EOF
 }
 

@@ -1,4 +1,8 @@
-type Name<T, Y> = struct {
-    field: T<Y, Y>,
-    other_field: Y,
+type Name<A, B> = struct {
+    field: A<B<C<D, E>>>,
+    other_field: A,
+}
+
+fun ident<A, B>(name: A<B>): usize {
+    const variable_name = 10;
 }

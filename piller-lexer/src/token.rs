@@ -3,18 +3,18 @@ pub trait DisplaySource {
     fn display_source<'a>(&self, source: &'a str) -> &'a str;
 }
 
-impl Into<Span> for usize {
-    fn into(self) -> Span {
+impl From<usize> for Span {
+    fn from(val: usize) -> Self {
         Span {
-            start: self,
-            end: self,
+            start: val,
+            end: val,
         }
     }
 }
 
-impl Into<Span> for (usize, usize) {
-    fn into(self) -> Span {
-        let (start, end) = self;
+impl From<(usize, usize)> for Span {
+    fn from(val: (usize, usize)) -> Self {
+        let (start, end) = val;
         Span { start, end }
     }
 }
@@ -131,8 +131,6 @@ pub enum TokenKind {
     BitAnd, // &
     BitOr,  // |
     BitXor, // ^
-    LShift, // <<
-    RShift, // >>
 
     // Operators - Assignment
     Assign,       // =
@@ -243,6 +241,18 @@ impl TokenStream {
 
     pub fn peek_token(&self) -> Token {
         self.inner[self.cursor]
+    }
+
+    pub fn peek_prev_token(&self) -> Token {
+        let cursor = self.cursor.saturating_sub(1);
+        debug_assert!(!self.inner.is_empty());
+        self.inner[cursor]
+    }
+
+    pub fn peek_prev(&self) -> TokenKind {
+        let cursor = self.cursor.saturating_sub(1);
+        debug_assert!(!self.inner.is_empty());
+        self.inner[cursor].kind
     }
 
     #[allow(clippy::should_implement_trait)]

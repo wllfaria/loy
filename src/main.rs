@@ -1,4 +1,5 @@
 use miette::NamedSource;
+use piller_parser::ParseContext;
 
 fn main() -> miette::Result<()> {
     let args = std::env::args().collect::<Vec<_>>();
@@ -7,15 +8,23 @@ fn main() -> miette::Result<()> {
         return Ok(());
     };
 
-    let file_contents = std::fs::read_to_string(filename).unwrap();
-    let tokens = piller_lexer::Lexer::new(&file_contents).lex().unwrap();
+    let source = std::fs::read_to_string(filename).unwrap();
+    let tokens = piller_lexer::Lexer::new(&source).lex().unwrap();
 
-    match piller_parser::Parser::new().parse(tokens) {
+    let result = piller_parser::parse_token_stream(&mut ParseContext {
+        source: &source,
+        tokens,
+    });
+
+    match result {
         Ok(ast) => println!("{ast:#?}"),
-        Err(error) => Err(error
-            .into_report()
-            .with_source_code(NamedSource::new(filename, file_contents)))?,
-    };
+        Err(error) => {
+            let report = error
+                .into_report()
+                .with_source_code(NamedSource::new(filename, source));
+            eprintln!("{report:?}");
+        }
+    }
 
     Ok(())
 }

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use miette::{LabeledSpan, SourceSpan};
 use piller_lexer::Span;
 
@@ -13,62 +15,71 @@ impl IntoSourceSpan for Span {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ParseOutput<T> {
-    value: Option<T>,
-    issues: Vec<ParseIssue>,
-}
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+pub struct ReportTitleWeight(u8);
 
-impl<T> Default for ParseOutput<T> {
-    fn default() -> Self {
-        Self {
-            value: None,
-            issues: vec![],
-        }
+impl From<u8> for ReportTitleWeight {
+    fn from(val: u8) -> Self {
+        ReportTitleWeight(val)
     }
 }
 
-impl<T> ParseOutput<T> {
-    pub fn with_value(value: T) -> Self {
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct ReportTitle {
+    message: String,
+    weight: ReportTitleWeight,
+}
+
+impl ReportTitle {
+    pub fn new(message: impl ToString) -> Self {
         Self {
-            value: Some(value),
-            issues: vec![],
+            message: message.to_string(),
+            weight: 0.into(),
         }
     }
 
-    pub fn with_issue(issue: ParseIssue) -> Self {
+    pub fn weighted(message: impl ToString, weight: impl Into<ReportTitleWeight>) -> Self {
         Self {
-            value: None,
-            issues: vec![issue],
+            message: message.to_string(),
+            weight: weight.into(),
         }
     }
+}
 
-    pub fn merge<U>(&mut self, other: ParseOutput<U>) -> Option<U> {
-        self.issues.extend(other.issues);
-        other.value
+pub trait IntoReportTitle {
+    fn into_report_title(self) -> ReportTitle
+    where
+        Self: Sized,
+    {
+        Self::into_report_title_weighted(self, 0)
     }
 
-    pub fn has_issues(&self) -> bool {
-        !self.issues.is_empty()
-    }
+    fn into_report_title_weighted(self, weight: impl Into<ReportTitleWeight>) -> ReportTitle
+    where
+        Self: Sized;
+}
 
-    pub fn set_value(&mut self, value: T) {
-        self.value = Some(value)
-    }
-
-    pub fn add_issue(&mut self, issue: ParseIssue) {
-        self.issues.push(issue)
-    }
-
-    pub fn into_result(self, message: impl ToString) -> Result<T, Error> {
-        if self.issues.is_empty() {
-            Ok(self.value.expect("parser produced no value but no issues"))
-        } else {
-            Err(Error {
-                message: message.to_string(),
-                issues: self.issues,
-            })
+impl<S> IntoReportTitle for S
+where
+    S: ToString,
+{
+    fn into_report_title_weighted(self, weight: impl Into<ReportTitleWeight>) -> ReportTitle
+    where
+        Self: Sized,
+    {
+        ReportTitle {
+            message: self.to_string(),
+            weight: weight.into(),
         }
+    }
+}
+
+impl IntoReportTitle for ReportTitle {
+    fn into_report_title_weighted(self, _: impl Into<ReportTitleWeight>) -> ReportTitle
+    where
+        Self: Sized,
+    {
+        self
     }
 }
 
@@ -76,6 +87,9 @@ impl<T> ParseOutput<T> {
 pub struct ParseIssue {
     message: String,
     span: SourceSpan,
+    help: Option<String>,
+    error_title: ReportTitle,
+    severity: ErrorSeverity,
 }
 
 impl ParseIssue {
@@ -83,15 +97,68 @@ impl ParseIssue {
         Self {
             message: message.to_string(),
             span: span.into_source_span(),
+            help: None,
+            error_title: ReportTitle::default(),
+            severity: ErrorSeverity::Error,
+        }
+    }
+
+    pub fn with_help(mut self, message: impl ToString) -> Self {
+        self.help = Some(message.to_string());
+        self
+    }
+
+    pub fn with_report_title(mut self, title: impl IntoReportTitle) -> Self {
+        self.error_title = title.into_report_title();
+        self
+    }
+
+    pub fn with_severity(mut self, severity: ErrorSeverity) -> Self {
+        self.severity = severity;
+        self
+    }
+
+    pub fn into_error<T>(self) -> Result<T> {
+        Err(Error {
+            title: self.error_title.clone(),
+            severity: self.severity,
+            issues: vec![self],
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum ErrorSeverity {
+    Advice,
+    Warning,
+    Error,
+}
+
+impl From<ErrorSeverity> for miette::Severity {
+    fn from(val: ErrorSeverity) -> Self {
+        match val {
+            ErrorSeverity::Advice => miette::Severity::Advice,
+            ErrorSeverity::Warning => miette::Severity::Warning,
+            ErrorSeverity::Error => miette::Severity::Error,
         }
     }
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("{message}")]
 pub struct Error {
-    message: String,
+    title: ReportTitle,
     issues: Vec<ParseIssue>,
+    severity: ErrorSeverity,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.severity {
+            ErrorSeverity::Error => write!(f, "Error:   {}", self.title.message),
+            ErrorSeverity::Warning => write!(f, "Warning: {}", self.title.message),
+            ErrorSeverity::Advice => write!(f, "Info:    {}", self.title.message),
+        }
+    }
 }
 
 impl Error {
@@ -109,5 +176,24 @@ impl miette::Diagnostic for Error {
                 issue.span.len(),
             )
         })))
+    }
+
+    fn help<'a>(&'a self) -> Option<Box<dyn std::fmt::Display + 'a>> {
+        let strongest_issue_help = self
+            .issues
+            .iter()
+            .max_by_key(|t| t.error_title.weight)
+            .and_then(|issue| issue.help.as_ref());
+
+        match strongest_issue_help {
+            Some(message) => Some(Box::new(message)),
+            None => Some(Box::new(
+                self.issues.iter().find_map(|issue| issue.help.as_ref())?,
+            )),
+        }
+    }
+
+    fn severity(&self) -> Option<miette::Severity> {
+        Some(self.severity.into())
     }
 }
