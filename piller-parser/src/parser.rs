@@ -175,10 +175,19 @@ fn parse_generics_decl(ctx: &mut ParseContext<'_>) -> Result<Vec<AstNodeGenericD
             TokenKind::Greater => {}
             TokenKind::Comma => ctx.tokens.consume(),
             TokenKind::Eof => {
-                return ParseIssue::new("unexpected end of file", next_token.position).into_error();
+                let prev_token = ctx.tokens.peek_prev_token();
+                let position = prev_token.position.merge(name.position);
+                return ParseIssue::new("unterminated generic declaration listing", position)
+                    .with_report_title("unexpected end of file (EOF)")
+                    .with_help("did you forget a closing  `>`?")
+                    .into_error();
             }
             _ => {
-                return ParseIssue::new("unclosed generic argument list", next_token.position)
+                let prev_token = ctx.tokens.peek_prev_token();
+                let position = prev_token.position;
+                return ParseIssue::new("generic list must be closed with a `>`", position)
+                    .with_report_title("syntax error")
+                    .with_help("did you forget to add a closing `>`?")
                     .into_error();
             }
         }
@@ -239,11 +248,10 @@ fn expect_token_type_kind(ctx: &mut ParseContext<'_>) -> Result<(TypeDeclKind, S
     let token_type_kind = ctx.tokens.next_token();
 
     if !matches!(token_type_kind.kind, TokenKind::Struct | TokenKind::Enum) {
-        return ParseIssue::new(
-            "invalid type kind, allowed type kinds would be `struct` or `enum` for example.",
-            token_type_kind.position,
-        )
-        .into_error();
+        return ParseIssue::new("this is not a valid type kind", token_type_kind.position)
+            .with_report_title("unknown type kind")
+            .with_help("allowed tokens here could be a `struct` or `enum`, for example")
+            .into_error();
     }
 
     Ok((token_type_kind.kind.into(), token_type_kind.position))
