@@ -11,9 +11,11 @@ macro_rules! expect_token {
         if matches!(tok.kind, $($pat)|+) {
             Ok(tok)
         } else {
-            super::result::ParseIssue::new(
+	    $tokens.prev_token(); // go back once to get the actual position
+	    let prev_token = $tokens.peek_prev_token();
+            crate::result::ParseIssue::new(
                 concat!("expected one of: ", $(stringify!($pat), " "),+),
-                tok.position,
+                prev_token.position,
             ).into_error()
         }
     }};
@@ -82,8 +84,8 @@ fn parse_struct_decl(ctx: &mut ParseContext<'_>, keyword_position: Span) -> Resu
         let field_type = parse_type_annotation(ctx)?;
 
         match ctx.tokens.peek() {
+            TokenKind::Comma => consume_optional_comma(ctx),
             TokenKind::RBrace => continue,
-            TokenKind::Comma => ctx.tokens.consume(),
             TokenKind::Eof => {
                 let prev_token = ctx.tokens.peek_prev_token();
                 let position = prev_token.position.merge(field_name.position);
@@ -224,7 +226,7 @@ fn parse_function_decl(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
     Ok(AstNode::Function(AstNodeFun {
         name,
         args,
-        body,
+        body: Box::new(body),
         generics,
         position,
         return_ty,
@@ -237,11 +239,18 @@ fn parse_function_args(ctx: &mut ParseContext<'_>) -> Result<Vec<AstNodeFunArg>>
     while !matches!(ctx.tokens.peek(), TokenKind::RParen | TokenKind::Eof) {
         let name = parse_identifier(ctx)?;
         let ty = parse_type_annotation(ctx)?;
+        consume_optional_comma(ctx);
         let position = name.position.merge(ty.position);
         args.push(AstNodeFunArg { name, ty, position })
     }
 
     Ok(args)
+}
+
+pub fn consume_optional_comma(ctx: &mut ParseContext<'_>) {
+    if matches!(ctx.tokens.peek(), TokenKind::Comma) {
+        ctx.tokens.consume();
+    }
 }
 
 fn expect_token_type_kind(ctx: &mut ParseContext<'_>) -> Result<(TypeDeclKind, Span)> {

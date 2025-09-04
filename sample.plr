@@ -1,9 +1,9 @@
-type Name<A, B> = struct {
-    field: A<B<C<D, E>>>,
-    other_field: A,
-}
-
-fun ident<A, B>(name: A<B>): usize {
+fun ident(a: usize, b: usize) {
     const variable_name = 10;
-    const other_variable = 10 + 30 * 3 / 10 % 5;
+    const other_variable = -~10;
+    const variable = function_call();
+
+    {
+	const block = 10;
+    }
 }
