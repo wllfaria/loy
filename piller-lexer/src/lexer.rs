@@ -86,7 +86,6 @@ impl<'src> Lexer<'src> {
 
                 ('/', Some('*'), _) => self.take_multiline_comment(byte_pos)?,
                 ('/', Some('/'), _) => self.take_single_line_comment(byte_pos),
-                ('-', Some('>'), _) => self.double_token(TokenKind::ThinArrow, byte_pos),
                 ('-', Some('0'..='9'), _) => self.take_number(byte_pos)?,
 
                 // arithmetic operators
@@ -114,6 +113,8 @@ impl<'src> Lexer<'src> {
                 ('}', _, _) => TokenKind::RBrace.into_token(byte_pos),
                 ('(', _, _) => TokenKind::LParen.into_token(byte_pos),
                 (')', _, _) => TokenKind::RParen.into_token(byte_pos),
+                ('[', _, _) => TokenKind::LBracket.into_token(byte_pos),
+                (']', _, _) => TokenKind::RBracket.into_token(byte_pos),
                 (':', _, _) => TokenKind::Colon.into_token(byte_pos),
                 (';', _, _) => TokenKind::SemiColon.into_token(byte_pos),
                 (',', _, _) => TokenKind::Comma.into_token(byte_pos),

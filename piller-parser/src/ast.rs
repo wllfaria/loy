@@ -156,11 +156,78 @@ pub struct NumberExpr {
     pub position: Span,
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum Operator {
+    Minus,
+    Star,
+    Div,
+    Plus,
+    Mod,
+    Increment,
+    Decrement,
+    Equal,
+    NotEqual,
+    Lesser,
+    Greater,
+    LesserEqual,
+    GreaterEqual,
+    Not,
+    Or,
+    And,
+    BitNot,
+    BitAnd,
+    BitOr,
+    BitXor,
+    LParen,
+    LBracket,
+    Dot,
+}
+
+impl Operator {
+    pub fn from_token_kind(token_kind: TokenKind) -> Self {
+        match token_kind {
+            TokenKind::Minus => Operator::Minus,
+            TokenKind::Star => Operator::Star,
+            TokenKind::Div => Operator::Div,
+            TokenKind::Plus => Operator::Plus,
+            TokenKind::Mod => Operator::Mod,
+            TokenKind::Increment => Operator::Increment,
+            TokenKind::Decrement => Operator::Decrement,
+            TokenKind::Equal => Operator::Equal,
+            TokenKind::NotEqual => Operator::NotEqual,
+            TokenKind::Lesser => Operator::Lesser,
+            TokenKind::Greater => Operator::Greater,
+            TokenKind::LesserEqual => Operator::LesserEqual,
+            TokenKind::GreaterEqual => Operator::GreaterEqual,
+            TokenKind::Not => Operator::Not,
+            TokenKind::Or => Operator::Or,
+            TokenKind::And => Operator::And,
+            TokenKind::BitNot => Operator::BitNot,
+            TokenKind::BitAnd => Operator::BitAnd,
+            TokenKind::BitOr => Operator::BitOr,
+            TokenKind::BitXor => Operator::BitXor,
+            TokenKind::LParen => Operator::LParen,
+            TokenKind::LBracket => Operator::LBracket,
+            TokenKind::Dot => Operator::Dot,
+            _ => unreachable!("token kind cannot be converted into an operator"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct BinaryExpr {
+    pub op: Operator,
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>,
+    pub position: Span,
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Expr {
     Block(BlockExpr),
     Binding(BindingExpr),
     Number(NumberExpr),
+    Binary(BinaryExpr),
 }
 
 impl Expr {
@@ -169,6 +236,7 @@ impl Expr {
             Expr::Block(expr) => expr.position,
             Expr::Binding(expr) => expr.position,
             Expr::Number(expr) => expr.position,
+            Expr::Binary(expr) => expr.position,
         }
     }
 }

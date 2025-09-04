@@ -5,4 +5,5 @@ type Name<A, B> = struct {
 
 fun ident<A, B>(name: A<B>): usize {
     const variable_name = 10;
+    const other_variable = 10 + 30 * 3 / 10 % 5;
 }

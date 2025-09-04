@@ -93,6 +93,8 @@ pub enum TokenKind {
     RBrace,    // }
     LParen,    // (
     RParen,    // )
+    LBracket,  // [
+    RBracket,  // ]
     SemiColon, // ;
     Colon,     // :
     Comma,     // ,
@@ -144,9 +146,6 @@ pub enum TokenKind {
     BitXorAssign, // ^=
     LShiftAssign, // <<=
     RShiftAssign, // >>=
-
-    // Other
-    ThinArrow, // ->
 }
 
 impl TokenKind {
@@ -181,6 +180,35 @@ impl TokenKind {
         matches!(
             self,
             TokenKind::Bool(_) | TokenKind::Integer(_) | TokenKind::Unsigned(_)
+        )
+    }
+
+    pub fn is_operator(&self) -> bool {
+        matches!(
+            self,
+            TokenKind::Minus
+                | TokenKind::Star
+                | TokenKind::Div
+                | TokenKind::Plus
+                | TokenKind::Mod
+                | TokenKind::Increment
+                | TokenKind::Decrement
+                | TokenKind::Equal
+                | TokenKind::NotEqual
+                | TokenKind::Lesser
+                | TokenKind::Greater
+                | TokenKind::LesserEqual
+                | TokenKind::GreaterEqual
+                | TokenKind::Not
+                | TokenKind::Or
+                | TokenKind::And
+                | TokenKind::BitNot
+                | TokenKind::BitAnd
+                | TokenKind::BitOr
+                | TokenKind::BitXor
+                | TokenKind::LParen
+                | TokenKind::LBracket
+                | TokenKind::Dot
         )
     }
 }
