@@ -4,23 +4,6 @@ use crate::ast::*;
 use crate::expr::parse_expr_block;
 use crate::result::{ParseIssue, ReportTitle, Result};
 
-#[macro_export]
-macro_rules! expect_token {
-    ($tokens:expr, $($pat:pat),+ $(,)?) => {{
-        let tok = $tokens.next_token();
-        if matches!(tok.kind, $($pat)|+) {
-            Ok(tok)
-        } else {
-	    $tokens.prev_token(); // go back once to get the actual position
-	    let prev_token = $tokens.peek_prev_token();
-            crate::result::ParseIssue::new(
-                concat!("expected one of: ", $(stringify!($pat), " "),+),
-                prev_token.position,
-            ).into_error()
-        }
-    }};
-}
-
 pub struct ParseContext<'src> {
     pub tokens: TokenStream,
     pub source: &'src str,
@@ -45,28 +28,79 @@ fn parse_statement(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
 }
 
 fn parse_type_decl(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
-    let type_keyword = expect_token!(ctx.tokens, TokenKind::Type)?;
+    let type_keyword = ctx.tokens.next_token();
+    if !matches!(type_keyword.kind, TokenKind::Type) {
+        let message = format!("expected keyword `type`, but found {}", type_keyword.kind);
+        return ParseIssue::new(message, type_keyword.position)
+            .with_report_title("unexpected token")
+            .into_error();
+    }
+
     let type_name = parse_identifier(ctx)?;
     let type_generics = parse_generics_decl(ctx)?;
 
-    // if there is no assign token `=`, theres no way to keep parsing as its ambiguous what
-    // would be next.
-    expect_token!(ctx.tokens, TokenKind::Assign)?;
+    match ctx.tokens.peek() {
+        TokenKind::Assign => ctx.tokens.consume(),
+        TokenKind::Eof => {
+            let position = ctx.tokens.peek_prev_token().position;
+            return ParseIssue::new("unterminated type declaration", position)
+                .with_report_title("unexpected end of file (EOF)")
+                .into_error();
+        }
+        kind => {
+            let position = ctx.tokens.peek_prev_token().position;
+            let message = format!("invalid token, expected `=` (EQUAL_SIGN) but found `{kind}`");
+            return ParseIssue::new(message, position)
+                .with_report_title("syntax error")
+                .with_help("add a `=` (EQUAL_SIGN) after type keyword")
+                .into_error();
+        }
+    }
 
-    // if there is an invalid type kind after the assign token, there is also no way to keep
-    // parsing.
     let (type_kind, ty_position) = expect_token_type_kind(ctx)?;
 
-    expect_token!(ctx.tokens, TokenKind::LBrace)?;
+    match ctx.tokens.peek() {
+        TokenKind::LBrace => ctx.tokens.consume(),
+        TokenKind::Eof => {
+            let position = ctx.tokens.peek_prev_token().position;
+            return ParseIssue::new("unterminated type declaration", position)
+                .with_report_title("unexpected end of file (EOF)")
+                .into_error();
+        }
+        kind => {
+            let message = format!("invalid token, expected `{{` (LEFT_BRACE) but found `{kind}`");
+            return ParseIssue::new(message, ty_position)
+                .with_report_title("syntax error")
+                .with_help("add a `{` (LEFT_BRACE) after type kind")
+                .into_error();
+        }
+    }
 
     let value = match type_kind {
         TypeDeclKind::Struct => parse_struct_decl(ctx, ty_position)?,
+        TypeDeclKind::Interface => parse_interface_decl(ctx, ty_position)?,
         TypeDeclKind::Enum => todo!(),
     };
 
-    let close_brace = expect_token!(ctx.tokens, TokenKind::RBrace)?;
-    let position = type_keyword.position.merge(close_brace.position);
+    let close_brace = match ctx.tokens.peek() {
+        TokenKind::RBrace => ctx.tokens.next_token(),
+        TokenKind::Eof => {
+            let position = ctx.tokens.peek_prev_token().position;
+            return ParseIssue::new("unterminated type declaration", position)
+                .with_report_title("unexpected end of file (EOF)")
+                .into_error();
+        }
+        kind => {
+            let position = ctx.tokens.peek_token().position;
+            let message = format!("invalid token, expected `}}` (RIGHT_BRACE) but found `{kind}`");
+            return ParseIssue::new(message, position)
+                .with_report_title("syntax error")
+                .with_help("did you forget a closing brace `}`?")
+                .into_error();
+        }
+    };
 
+    let position = type_keyword.position.merge(close_brace.position);
     Ok(AstNode::TypeDecl(AstNodeTypeDecl {
         name: type_name,
         kind: type_kind,
@@ -85,18 +119,16 @@ fn parse_struct_decl(ctx: &mut ParseContext<'_>, keyword_position: Span) -> Resu
 
         match ctx.tokens.peek() {
             TokenKind::Comma => consume_optional_comma(ctx),
-            TokenKind::RBrace => continue,
+            TokenKind::RBrace => break,
             TokenKind::Eof => {
-                let prev_token = ctx.tokens.peek_prev_token();
-                let position = prev_token.position.merge(field_name.position);
+                let position = ctx.tokens.peek_prev_token().position;
                 return ParseIssue::new("unterminated struct declaration", position)
                     .with_report_title("unexpected end of file (EOF)")
                     .with_help("did you forget a closing brace `}`?")
                     .into_error();
             }
             _ => {
-                let prev_token = ctx.tokens.peek_prev_token();
-                let position = prev_token.position;
+                let position = ctx.tokens.peek_prev_token().position;
                 return ParseIssue::new("struct fields must be separated by a comma", position)
                     .with_report_title("syntax error")
                     .with_help("did you forget to add a comma `,`?")
@@ -116,8 +148,43 @@ fn parse_struct_decl(ctx: &mut ParseContext<'_>, keyword_position: Span) -> Resu
     Ok(AstNode::Struct(AstNodeStruct { fields, position }))
 }
 
+fn parse_interface_decl(ctx: &mut ParseContext<'_>, start: Span) -> Result<AstNode> {
+    let mut functions = vec![];
+
+    while !matches!(ctx.tokens.peek(), TokenKind::RBrace | TokenKind::Eof) {
+        let signature = parse_function_signature(ctx)?;
+
+        match ctx.tokens.peek() {
+            TokenKind::SemiColon => ctx.tokens.consume(),
+            TokenKind::Eof => {
+                let position = ctx.tokens.peek_prev_token().position;
+                return ParseIssue::new("missing semicolon after function signature", position)
+                    .with_report_title("unexpected end of file (EOF)")
+                    .into_error();
+            }
+            kind => {
+                let position = ctx.tokens.peek_prev_token().position;
+                let message =
+                    format!("unexpected token, expected `;` (SEMICOLON) but found `{kind}`");
+                return ParseIssue::new(message, position)
+                    .with_report_title("syntax error")
+                    .with_help("add a `;` (SEMICOLON) after function signature")
+                    .into_error();
+            }
+        }
+
+        functions.push(signature);
+    }
+
+    let position = start.merge(ctx.tokens.peek_token().position);
+    Ok(AstNode::Interface(AstNodeInterface {
+        functions,
+        position,
+    }))
+}
+
 pub fn parse_type_annotation(ctx: &mut ParseContext<'_>) -> Result<AstNodeTypeAnnotation> {
-    expect_token!(ctx.tokens, TokenKind::Colon)?;
+    assert!(ctx.tokens.next() == TokenKind::Colon);
 
     if ctx.tokens.peek().is_primitive() {
         let type_node = parse_primitive_type(ctx);
@@ -165,28 +232,25 @@ fn parse_generics_decl(ctx: &mut ParseContext<'_>) -> Result<Vec<AstNodeGenericD
         return Ok(generics);
     }
 
-    expect_token!(ctx.tokens, TokenKind::Lesser)?;
+    assert!(ctx.tokens.next() == TokenKind::Lesser);
 
     while !matches!(ctx.tokens.peek(), TokenKind::Greater | TokenKind::Eof) {
         let name = parse_identifier(ctx)?;
         let has_inner_generics = matches!(ctx.tokens.peek(), TokenKind::Lesser);
         let inner_generics = if has_inner_generics { parse_generics_decl(ctx)? } else { vec![] };
 
-        let next_token = ctx.tokens.peek_token();
-        match next_token.kind {
-            TokenKind::Greater => {}
-            TokenKind::Comma => ctx.tokens.consume(),
+        match ctx.tokens.peek() {
+            TokenKind::Comma => consume_optional_comma(ctx),
+            TokenKind::Greater => ctx.tokens.consume(),
             TokenKind::Eof => {
-                let prev_token = ctx.tokens.peek_prev_token();
-                let position = prev_token.position.merge(name.position);
+                let position = ctx.tokens.peek_prev_token().position;
                 return ParseIssue::new("unterminated generic declaration listing", position)
                     .with_report_title("unexpected end of file (EOF)")
                     .with_help("did you forget a closing  `>`?")
                     .into_error();
             }
             _ => {
-                let prev_token = ctx.tokens.peek_prev_token();
-                let position = prev_token.position;
+                let position = ctx.tokens.peek_prev_token().position;
                 return ParseIssue::new("generic list must be closed with a `>`", position)
                     .with_report_title("syntax error")
                     .with_help("did you forget to add a closing `>`?")
@@ -201,18 +265,60 @@ fn parse_generics_decl(ctx: &mut ParseContext<'_>) -> Result<Vec<AstNodeGenericD
         })
     }
 
-    expect_token!(ctx.tokens, TokenKind::Greater)?;
     Ok(generics)
 }
 
 fn parse_function_decl(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
+    let signature = parse_function_signature(ctx)?;
+    let body = parse_expr_block(ctx)?;
+    Ok(AstNode::Function(signature.into_function_decl(body)))
+}
+
+fn parse_function_signature(ctx: &mut ParseContext<'_>) -> Result<AstNodeFunSignature> {
     let keyword = ctx.tokens.next_token();
 
     let name = parse_identifier(ctx)?;
     let generics = parse_generics_decl(ctx)?;
-    expect_token!(ctx.tokens, TokenKind::LParen)?;
+
+    match ctx.tokens.peek() {
+        TokenKind::LParen => ctx.tokens.consume(),
+        TokenKind::Eof => {
+            let prev_token = ctx.tokens.peek_prev_token();
+            return ParseIssue::new("unterminated function signature", prev_token.position)
+                .with_report_title("unexpected end of file (EOF)")
+                .with_help("did you forget a opening paren `(`?")
+                .into_error();
+        }
+        kind => {
+            let position = ctx.tokens.peek_prev_token().position;
+            let message =
+                format!("unexpected token, expected `(` (LEFT_PAREN). But found `{kind}`");
+            return ParseIssue::new(message, position)
+                .with_report_title("syntax error")
+                .into_error();
+        }
+    }
+
     let args = parse_function_args(ctx)?;
-    expect_token!(ctx.tokens, TokenKind::RParen)?;
+
+    let rparen = match ctx.tokens.peek() {
+        TokenKind::RParen => ctx.tokens.next_token(),
+        TokenKind::Eof => {
+            let prev_token = ctx.tokens.peek_prev_token();
+            return ParseIssue::new("unterminated function signature", prev_token.position)
+                .with_report_title("unexpected end of file (EOF)")
+                .with_help("did you forget a closing paren `)`?")
+                .into_error();
+        }
+        kind => {
+            let position = ctx.tokens.peek_prev_token().position;
+            let message =
+                format!("unexpected token, expected `)` (RIGHT_PAREN). But found `{kind}`");
+            return ParseIssue::new(message, position)
+                .with_report_title("syntax error")
+                .into_error();
+        }
+    };
 
     let return_ty = if matches!(ctx.tokens.peek(), TokenKind::Colon) {
         Some(parse_type_annotation(ctx)?)
@@ -220,17 +326,19 @@ fn parse_function_decl(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
         None
     };
 
-    let body = parse_expr_block(ctx)?;
+    let end = return_ty
+        .as_ref()
+        .map(|ret| ret.position)
+        .unwrap_or(rparen.position);
+    let position = keyword.position.merge(end);
 
-    let position = keyword.position.merge(body.position());
-    Ok(AstNode::Function(AstNodeFun {
+    Ok(AstNodeFunSignature {
         name,
         args,
-        body: Box::new(body),
         generics,
         position,
         return_ty,
-    }))
+    })
 }
 
 fn parse_function_args(ctx: &mut ParseContext<'_>) -> Result<Vec<AstNodeFunArg>> {
@@ -256,7 +364,10 @@ pub fn consume_optional_comma(ctx: &mut ParseContext<'_>) {
 fn expect_token_type_kind(ctx: &mut ParseContext<'_>) -> Result<(TypeDeclKind, Span)> {
     let token_type_kind = ctx.tokens.next_token();
 
-    if !matches!(token_type_kind.kind, TokenKind::Struct | TokenKind::Enum) {
+    if !matches!(
+        token_type_kind.kind,
+        TokenKind::Struct | TokenKind::Enum | TokenKind::Interface
+    ) {
         return ParseIssue::new("this is not a valid type kind", token_type_kind.position)
             .with_report_title("unknown type kind")
             .with_help("allowed tokens here could be a `struct` or `enum`, for example")
@@ -266,7 +377,7 @@ fn expect_token_type_kind(ctx: &mut ParseContext<'_>) -> Result<(TypeDeclKind, S
     Ok((token_type_kind.kind.into(), token_type_kind.position))
 }
 
-pub fn parse_identifier(ctx: &mut ParseContext<'_>) -> Result<AstNodeIdentifier> {
+pub fn parse_identifier(ctx: &mut ParseContext<'_>) -> Result<IdentifierExpr> {
     let ident = ctx.tokens.next_token();
 
     if matches!(ident.kind, TokenKind::Eof) {
@@ -287,5 +398,5 @@ pub fn parse_identifier(ctx: &mut ParseContext<'_>) -> Result<AstNodeIdentifier>
     }
 
     let position = ident.position;
-    Ok(AstNodeIdentifier { position })
+    Ok(IdentifierExpr { position })
 }

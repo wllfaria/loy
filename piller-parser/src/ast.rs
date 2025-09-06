@@ -13,7 +13,7 @@ impl Ast {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub struct AstNodeIdentifier {
+pub struct IdentifierExpr {
     pub position: Span,
 }
 
@@ -21,6 +21,7 @@ pub struct AstNodeIdentifier {
 pub enum TypeDeclKind {
     Struct,
     Enum,
+    Interface,
 }
 
 impl From<TokenKind> for TypeDeclKind {
@@ -28,6 +29,7 @@ impl From<TokenKind> for TypeDeclKind {
         match value {
             TokenKind::Struct => Self::Struct,
             TokenKind::Enum => Self::Enum,
+            TokenKind::Interface => Self::Interface,
             t => unreachable!("{t:?} is not a valid type declaration kind"),
         }
     }
@@ -35,7 +37,7 @@ impl From<TokenKind> for TypeDeclKind {
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct AstNodeTypeDecl {
-    pub name: AstNodeIdentifier,
+    pub name: IdentifierExpr,
     pub kind: TypeDeclKind,
     pub value: Box<AstNode>,
     pub generics: Vec<AstNodeGenericDecl>,
@@ -49,8 +51,36 @@ pub struct AstNodeStruct {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeFunSignature {
+    pub name: IdentifierExpr,
+    pub generics: Vec<AstNodeGenericDecl>,
+    pub args: Vec<AstNodeFunArg>,
+    pub return_ty: Option<AstNodeTypeAnnotation>,
+    pub position: Span,
+}
+
+impl AstNodeFunSignature {
+    pub fn into_function_decl(self, body: Expr) -> AstNodeFun {
+        AstNodeFun {
+            name: self.name,
+            generics: self.generics,
+            args: self.args,
+            return_ty: self.return_ty,
+            position: self.position.merge(body.position()),
+            body,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeInterface {
+    pub functions: Vec<AstNodeFunSignature>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeStructField {
-    pub name: AstNodeIdentifier,
+    pub name: IdentifierExpr,
     pub ty: AstNodeTypeAnnotation,
     pub position: Span,
 }
@@ -64,7 +94,7 @@ pub enum PrimitiveTypeKind {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeNamedType {
-    pub name: AstNodeIdentifier,
+    pub name: IdentifierExpr,
     pub position: Span,
     pub generics: Vec<AstNodeGenericDecl>,
 }
@@ -84,31 +114,50 @@ pub struct AstNodeTypeAnnotation {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeGenericDecl {
     pub position: Span,
-    pub name: AstNodeIdentifier,
+    pub name: IdentifierExpr,
     pub generics: Vec<AstNodeGenericDecl>,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct AstNodeFun {
-    pub name: AstNodeIdentifier,
+    pub name: IdentifierExpr,
     pub generics: Vec<AstNodeGenericDecl>,
     pub return_ty: Option<AstNodeTypeAnnotation>,
     pub args: Vec<AstNodeFunArg>,
     pub position: Span,
-    pub body: Box<AstNode>,
+    pub body: Expr,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeFunArg {
-    pub name: AstNodeIdentifier,
+    pub name: IdentifierExpr,
     pub ty: AstNodeTypeAnnotation,
     pub position: Span,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeBlock {
+pub enum AstNode {
+    TypeDecl(AstNodeTypeDecl),
+    Struct(AstNodeStruct),
+    Interface(AstNodeInterface),
+    Function(AstNodeFun),
+}
+
+impl AstNode {
+    pub fn position(&self) -> Span {
+        match self {
+            AstNode::TypeDecl(node) => node.position,
+            AstNode::Struct(node) => node.position,
+            AstNode::Interface(node) => node.position,
+            AstNode::Function(node) => node.position,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct BlockExpr {
     pub position: Span,
-    pub exprs: Vec<AstNode>,
+    pub exprs: Vec<Expr>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -118,11 +167,11 @@ pub enum BindingMutability {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeBinding {
+pub struct BindingExpr {
     pub mutability: BindingMutability,
-    pub name: AstNodeIdentifier,
+    pub name: IdentifierExpr,
     pub ty: Option<AstNodeTypeAnnotation>,
-    pub value: Box<AstNode>,
+    pub value: Box<Expr>,
     pub position: Span,
 }
 
@@ -134,78 +183,147 @@ pub enum NumberKindExpr {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeNumber {
+pub struct NumberExpr {
     pub kind: NumberKindExpr,
     pub position: Span,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeBinaryExpr {
+pub struct BoolExpr {
+    pub value: bool,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct StringExpr {
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct ArrayExpr {
+    pub elements: Vec<Expr>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct BinaryExpr {
     pub op: Operator,
-    pub lhs: Box<AstNode>,
-    pub rhs: Box<AstNode>,
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>,
     pub position: Span,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeUnaryExpr {
+pub struct UnaryExpr {
     pub op: Operator,
-    pub operand: Box<AstNode>,
+    pub operand: Box<Expr>,
     pub position: Span,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeFunctionCall {
-    pub callee: Box<AstNode>,
-    pub args: Vec<AstNode>,
+pub struct FunctionCallExpr {
+    pub callee: Box<Expr>,
+    pub args: Vec<Expr>,
     pub position: Span,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeArrayAccess {
-    pub array: Box<AstNode>,
-    pub index: Box<AstNode>,
+pub struct ArrayAccessExpr {
+    pub array: Box<Expr>,
+    pub index: Box<Expr>,
     pub position: Span,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeMemberAccess {
-    pub object: Box<AstNode>,
-    pub member: AstNodeIdentifier,
+pub struct MemberAccessExpr {
+    pub object: Box<Expr>,
+    pub member: IdentifierExpr,
     pub position: Span,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub enum AstNode {
-    TypeDecl(AstNodeTypeDecl),
-    Struct(AstNodeStruct),
-    Function(AstNodeFun),
-    Block(AstNodeBlock),
-    Binding(AstNodeBinding),
-    Ident(AstNodeIdentifier),
-    Number(AstNodeNumber),
-    Binary(AstNodeBinaryExpr),
-    Unary(AstNodeUnaryExpr),
-    FunctionCall(AstNodeFunctionCall),
-    ArrayAccess(AstNodeArrayAccess),
-    MemberAccess(AstNodeMemberAccess),
+pub struct IfExpr {
+    pub condition: Box<Expr>,
+    pub truthy: Box<Expr>,
+    pub falsy: Option<Box<Expr>>,
+    pub position: Span,
 }
 
-impl AstNode {
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct SemiColonExpr {
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct WhileExpr {
+    pub position: Span,
+    pub condition: Box<Expr>,
+    pub body: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct ForExpr {
+    pub index_var: Option<IdentifierExpr>,
+    pub item_var: IdentifierExpr,
+    pub iterable: Box<Expr>,
+    pub body: Box<Expr>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct StructFieldInitExpr {
+    pub field_name: IdentifierExpr,
+    pub field_value: Box<Expr>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct StructInitExpr {
+    pub fields: Vec<StructFieldInitExpr>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub enum Expr {
+    Block(BlockExpr),
+    Binding(BindingExpr),
+    Ident(IdentifierExpr),
+    Number(NumberExpr),
+    Bool(BoolExpr),
+    String(StringExpr),
+    Array(ArrayExpr),
+    Binary(BinaryExpr),
+    Unary(UnaryExpr),
+    FunctionCall(FunctionCallExpr),
+    ArrayAccess(ArrayAccessExpr),
+    MemberAccess(MemberAccessExpr),
+    If(IfExpr),
+    SemiColon(SemiColonExpr),
+    While(WhileExpr),
+    For(ForExpr),
+    StructInit(StructInitExpr),
+}
+
+impl Expr {
     pub fn position(&self) -> Span {
         match self {
-            AstNode::TypeDecl(node) => node.position,
-            AstNode::Struct(node) => node.position,
-            AstNode::Function(node) => node.position,
-            AstNode::Block(node) => node.position,
-            AstNode::Binding(node) => node.position,
-            AstNode::Ident(node) => node.position,
-            AstNode::Number(node) => node.position,
-            AstNode::Binary(node) => node.position,
-            AstNode::Unary(node) => node.position,
-            AstNode::FunctionCall(node) => node.position,
-            AstNode::ArrayAccess(node) => node.position,
-            AstNode::MemberAccess(node) => node.position,
+            Self::Block(node) => node.position,
+            Self::Binding(node) => node.position,
+            Self::Ident(node) => node.position,
+            Self::Number(node) => node.position,
+            Self::Bool(node) => node.position,
+            Self::String(node) => node.position,
+            Self::Array(node) => node.position,
+            Self::Binary(node) => node.position,
+            Self::Unary(node) => node.position,
+            Self::FunctionCall(node) => node.position,
+            Self::ArrayAccess(node) => node.position,
+            Self::MemberAccess(node) => node.position,
+            Self::If(node) => node.position,
+            Self::SemiColon(node) => node.position,
+            Self::While(node) => node.position,
+            Self::For(node) => node.position,
+            Self::StructInit(node) => node.position,
         }
     }
 }
@@ -234,6 +352,7 @@ pub enum Operator {
     BitXor,
     LParen,
     LBracket,
+    LBrace,
     Dot,
 }
 
@@ -262,6 +381,7 @@ impl Operator {
             TokenKind::BitXor => Operator::BitXor,
             TokenKind::LParen => Operator::LParen,
             TokenKind::LBracket => Operator::LBracket,
+            TokenKind::LBrace => Operator::LBrace,
             TokenKind::Dot => Operator::Dot,
             _ => unreachable!("token kind cannot be converted into an operator"),
         }

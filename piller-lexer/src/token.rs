@@ -73,9 +73,13 @@ pub enum TokenKind {
     Type,
     Struct,
     Enum,
+    Interface,
     Constant,
     Function,
     Variable,
+    While,
+    For,
+    In,
 
     // Literals
     String,
@@ -154,9 +158,13 @@ impl TokenKind {
         match identifier {
             "if" => Self::If,
             "else" => Self::Else,
+            "for" => Self::For,
+            "in" => Self::In,
+            "while" => Self::While,
             "type" => Self::Type,
             "struct" => Self::Struct,
             "enum" => Self::Enum,
+            "interface" => Self::Interface,
             "fun" => Self::Function,
             "var" => Self::Variable,
             "const" => Self::Constant,
@@ -208,6 +216,7 @@ impl TokenKind {
                 | TokenKind::BitXor
                 | TokenKind::LParen
                 | TokenKind::LBracket
+                | TokenKind::LBrace
                 | TokenKind::Dot
         )
     }
@@ -218,6 +227,91 @@ impl IntoToken for TokenKind {
         Token {
             kind: self,
             position: span.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenKind::If => write!(f, "if"),
+            TokenKind::Else => write!(f, "else"),
+            TokenKind::Type => write!(f, "type"),
+            TokenKind::Struct => write!(f, "struct"),
+            TokenKind::Enum => write!(f, "enum"),
+            TokenKind::Interface => write!(f, "interface"),
+            TokenKind::Constant => write!(f, "const"),
+            TokenKind::Function => write!(f, "fun"),
+            TokenKind::Variable => write!(f, "var"),
+            TokenKind::While => write!(f, "while"),
+            TokenKind::For => write!(f, "for"),
+            TokenKind::In => write!(f, "in"),
+            TokenKind::String => write!(f, "string"),
+            TokenKind::Bool(value) => write!(f, "{value}"),
+            TokenKind::Number(number) => match number {
+                Number::Unsigned(value) => write!(f, "{value}"),
+                Number::Signed(value) => write!(f, "{value}"),
+                Number::Float(value) => write!(f, "{value}"),
+            },
+            TokenKind::Integer(bit_size) => match bit_size {
+                NumericalBitSize::Bits8 => write!(f, "i8"),
+                NumericalBitSize::Bits16 => write!(f, "i16"),
+                NumericalBitSize::Bits32 => write!(f, "i32"),
+                NumericalBitSize::Bits64 => write!(f, "i64"),
+                NumericalBitSize::BitsPointer => write!(f, "isize"),
+            },
+            TokenKind::Unsigned(bit_size) => match bit_size {
+                NumericalBitSize::Bits8 => write!(f, "u8"),
+                NumericalBitSize::Bits16 => write!(f, "u16"),
+                NumericalBitSize::Bits32 => write!(f, "u32"),
+                NumericalBitSize::Bits64 => write!(f, "u64"),
+                NumericalBitSize::BitsPointer => write!(f, "usize"),
+            },
+            TokenKind::Identifier => write!(f, "identifier"),
+            TokenKind::Eof => write!(f, "eof"),
+            TokenKind::LBrace => write!(f, "{{"),
+            TokenKind::RBrace => write!(f, "}}"),
+            TokenKind::LParen => write!(f, "("),
+            TokenKind::RParen => write!(f, ")"),
+            TokenKind::LBracket => write!(f, "]"),
+            TokenKind::RBracket => write!(f, "]"),
+            TokenKind::SemiColon => write!(f, ";"),
+            TokenKind::Colon => write!(f, ":"),
+            TokenKind::Comma => write!(f, ","),
+            TokenKind::Dot => write!(f, "."),
+            TokenKind::Comment => write!(f, "//"),
+            TokenKind::DocComment => write!(f, "///"),
+            TokenKind::Plus => write!(f, "-"),
+            TokenKind::Minus => write!(f, "-"),
+            TokenKind::Star => write!(f, "*"),
+            TokenKind::Div => write!(f, "/"),
+            TokenKind::Mod => write!(f, "%"),
+            TokenKind::Increment => write!(f, "++"),
+            TokenKind::Decrement => write!(f, "--"),
+            TokenKind::Equal => write!(f, "=="),
+            TokenKind::NotEqual => write!(f, "!="),
+            TokenKind::Lesser => write!(f, "<"),
+            TokenKind::Greater => write!(f, ">"),
+            TokenKind::LesserEqual => write!(f, "<="),
+            TokenKind::GreaterEqual => write!(f, ">="),
+            TokenKind::Not => write!(f, "!"),
+            TokenKind::Or => write!(f, "||"),
+            TokenKind::And => write!(f, "&&"),
+            TokenKind::BitNot => write!(f, "~"),
+            TokenKind::BitAnd => write!(f, "&"),
+            TokenKind::BitOr => write!(f, "|"),
+            TokenKind::BitXor => write!(f, "^"),
+            TokenKind::Assign => write!(f, "="),
+            TokenKind::PlusAssign => write!(f, "+="),
+            TokenKind::MinusAssign => write!(f, "-="),
+            TokenKind::MulAssign => write!(f, "*="),
+            TokenKind::DivAssign => write!(f, "/="),
+            TokenKind::ModAssign => write!(f, "%="),
+            TokenKind::BitAndAssign => write!(f, "&="),
+            TokenKind::BitOrAssign => write!(f, "|="),
+            TokenKind::BitXorAssign => write!(f, "^="),
+            TokenKind::LShiftAssign => write!(f, "<<="),
+            TokenKind::RShiftAssign => write!(f, ">>="),
         }
     }
 }

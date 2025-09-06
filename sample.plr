@@ -1,9 +1,10 @@
-fun ident(a: usize, b: usize) {
-    const variable_name = 10;
-    const other_variable = -~10;
-    const variable = function_call();
+type Foo = struct {
+    name: string,
+}
 
-    {
-	const block = 10;
-    }
+fun func() {
+    var foo = Foo{
+        name = "adsad",
+        foo = "asd",
+    };
 }

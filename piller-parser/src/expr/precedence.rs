@@ -1,5 +1,6 @@
 use crate::ast::Operator;
 
+#[allow(dead_code)]
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum OperatorLocation {
     #[default]
@@ -28,6 +29,11 @@ const UNREACHABLE_SUFFIX: &str = "operator cannot be used as an suffix operator"
 pub fn op_precedence(operator: Operator, location: OperatorLocation) -> u8 {
     use Operator::*;
     match operator {
+        LBrace => match location {
+            OperatorLocation::Prefix => unreachable!("{UNREACHABLE_PREFIX}"),
+            OperatorLocation::Infix => unreachable!("{UNREACHABLE_INFIX}"),
+            OperatorLocation::Suffix => PRECEDENCE_SUFFIX,
+        },
         Minus | Plus => match location {
             OperatorLocation::Prefix => PRECEDENCE_PREFIX,
             OperatorLocation::Infix => PRECEDENCE_ADD,
