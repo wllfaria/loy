@@ -38,6 +38,7 @@ pub fn get_operator_context(lhs: &Expr) -> OperatorValidation {
             valid_postfix: &[Increment, Decrement, LBracket, Dot, LParen],
         },
         StructInit(_) => OperatorValidation { valid_postfix: &[] },
+        Return(_) | Break(_) | Continue(_) => OperatorValidation { valid_postfix: &[] },
     }
 }
 

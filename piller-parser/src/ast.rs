@@ -284,6 +284,23 @@ pub struct StructInitExpr {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct ReturnExpr {
+    pub value: Option<Box<Expr>>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct BreakExpr {
+    pub value: Option<Box<Expr>>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct ContinueExpr {
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Expr {
     Block(BlockExpr),
     Binding(BindingExpr),
@@ -302,6 +319,9 @@ pub enum Expr {
     While(WhileExpr),
     For(ForExpr),
     StructInit(StructInitExpr),
+    Return(ReturnExpr),
+    Break(BreakExpr),
+    Continue(ContinueExpr),
 }
 
 impl Expr {
@@ -324,6 +344,9 @@ impl Expr {
             Self::While(node) => node.position,
             Self::For(node) => node.position,
             Self::StructInit(node) => node.position,
+            Self::Return(node) => node.position,
+            Self::Break(node) => node.position,
+            Self::Continue(node) => node.position,
         }
     }
 }

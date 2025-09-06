@@ -50,12 +50,34 @@ pub enum NumericalBitSize {
     BitsPointer,
 }
 
+impl std::fmt::Display for NumericalBitSize {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Bits8 => write!(f, "8"),
+            Self::Bits16 => write!(f, "16"),
+            Self::Bits32 => write!(f, "32"),
+            Self::Bits64 => write!(f, "64"),
+            Self::BitsPointer => write!(f, "size"),
+        }
+    }
+}
+
 /// A numeric value parsed from the source code
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub enum Number {
     Unsigned(u64),
     Signed(i64),
     Float(f64),
+}
+
+impl std::fmt::Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unsigned(value) => write!(f, "{value}"),
+            Self::Signed(value) => write!(f, "{value}"),
+            Self::Float(value) => write!(f, "{value}"),
+        }
+    }
 }
 
 impl IntoToken for Number {
@@ -80,6 +102,9 @@ pub enum TokenKind {
     While,
     For,
     In,
+    Return,
+    Break,
+    Continue,
 
     // Literals
     String,
@@ -168,6 +193,9 @@ impl TokenKind {
             "fun" => Self::Function,
             "var" => Self::Variable,
             "const" => Self::Constant,
+            "return" => Self::Return,
+            "break" => Self::Break,
+            "continue" => Self::Continue,
             "i8" => Self::Integer(NumericalBitSize::Bits8),
             "i16" => Self::Integer(NumericalBitSize::Bits16),
             "i32" => Self::Integer(NumericalBitSize::Bits32),
@@ -257,27 +285,14 @@ impl std::fmt::Display for TokenKind {
             TokenKind::While => write!(f, "while"),
             TokenKind::For => write!(f, "for"),
             TokenKind::In => write!(f, "in"),
+            TokenKind::Return => write!(f, "return"),
+            TokenKind::Break => write!(f, "break"),
+            TokenKind::Continue => write!(f, "continue"),
             TokenKind::String => write!(f, "string"),
             TokenKind::Bool(value) => write!(f, "{value}"),
-            TokenKind::Number(number) => match number {
-                Number::Unsigned(value) => write!(f, "{value}"),
-                Number::Signed(value) => write!(f, "{value}"),
-                Number::Float(value) => write!(f, "{value}"),
-            },
-            TokenKind::Integer(bit_size) => match bit_size {
-                NumericalBitSize::Bits8 => write!(f, "i8"),
-                NumericalBitSize::Bits16 => write!(f, "i16"),
-                NumericalBitSize::Bits32 => write!(f, "i32"),
-                NumericalBitSize::Bits64 => write!(f, "i64"),
-                NumericalBitSize::BitsPointer => write!(f, "isize"),
-            },
-            TokenKind::Unsigned(bit_size) => match bit_size {
-                NumericalBitSize::Bits8 => write!(f, "u8"),
-                NumericalBitSize::Bits16 => write!(f, "u16"),
-                NumericalBitSize::Bits32 => write!(f, "u32"),
-                NumericalBitSize::Bits64 => write!(f, "u64"),
-                NumericalBitSize::BitsPointer => write!(f, "usize"),
-            },
+            TokenKind::Number(number) => write!(f, "{number}"),
+            TokenKind::Integer(bit_size) => write!(f, "i{bit_size})"),
+            TokenKind::Unsigned(bit_size) => write!(f, "i{bit_size})"),
             TokenKind::Identifier => write!(f, "identifier"),
             TokenKind::Eof => write!(f, "eof"),
             TokenKind::LBrace => write!(f, "{{"),

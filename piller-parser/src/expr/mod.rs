@@ -233,6 +233,9 @@ fn parse_primary_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
         TokenKind::SemiColon => Ok(parse_semicolon_expr(ctx)),
         TokenKind::While => parse_while_expr(ctx),
         TokenKind::For => parse_for_expr(ctx),
+        TokenKind::Return => parse_return_expr(ctx),
+        TokenKind::Break => parse_break_expr(ctx),
+        TokenKind::Continue => parse_continue_expr(ctx),
         t => todo!("Primary expression for {t:?}"),
     }
 }
@@ -603,4 +606,76 @@ fn parse_struct_initialization(ctx: &mut ParseContext<'_>, lhs: Expr) -> Result<
 
     let position = lhs.position().merge(rbrace.position);
     Ok(Expr::StructInit(StructInitExpr { fields, position }))
+}
+
+fn parse_return_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
+    let keyword = ctx.tokens.next_token();
+
+    let value = match ctx.tokens.peek() {
+        TokenKind::SemiColon => None,
+        _ => Some(Box::new(parse_expression(ctx)?)),
+    };
+
+    let position = match &value {
+        Some(expr) => keyword.position.merge(expr.position()),
+        None => keyword.position,
+    };
+
+    match ctx.tokens.peek() {
+        TokenKind::SemiColon => ctx.tokens.consume(),
+        _ => {
+            let position = ctx.tokens.peek_prev_token().position;
+            return ParseIssue::new("missing semicolon after return statement", position)
+                .with_report_title("syntax error")
+                .with_help("add a `;` (SEMICOLON) after return statement")
+                .into_error();
+        }
+    };
+
+    Ok(Expr::Return(ReturnExpr { value, position }))
+}
+
+fn parse_break_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
+    let keyword = ctx.tokens.next_token();
+
+    let value = match ctx.tokens.peek() {
+        TokenKind::SemiColon => None,
+        _ => Some(Box::new(parse_expression(ctx)?)),
+    };
+
+    let position = match &value {
+        Some(expr) => keyword.position.merge(expr.position()),
+        None => keyword.position,
+    };
+
+    match ctx.tokens.peek() {
+        TokenKind::SemiColon => ctx.tokens.consume(),
+        _ => {
+            let position = ctx.tokens.peek_prev_token().position;
+            return ParseIssue::new("missing semicolon after break statement", position)
+                .with_report_title("syntax error")
+                .with_help("add a `;` (SEMICOLON) after break statement")
+                .into_error();
+        }
+    };
+
+    Ok(Expr::Break(BreakExpr { value, position }))
+}
+
+fn parse_continue_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
+    let keyword = ctx.tokens.next_token();
+    let position = keyword.position;
+
+    match ctx.tokens.peek() {
+        TokenKind::SemiColon => ctx.tokens.consume(),
+        _ => {
+            let position = ctx.tokens.peek_prev_token().position;
+            return ParseIssue::new("missing semicolon after continue statement", position)
+                .with_report_title("syntax error")
+                .with_help("add a `;` (SEMICOLON) after continue statement")
+                .into_error();
+        }
+    };
+
+    Ok(Expr::Continue(ContinueExpr { position }))
 }
