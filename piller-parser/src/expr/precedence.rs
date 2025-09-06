@@ -21,6 +21,7 @@ const PRECEDENCE_BIT_XOR: u8 = 12;
 const PRECEDENCE_BIT_OR: u8 = 13;
 const PRECEDENCE_AND: u8 = 14;
 const PRECEDENCE_OR: u8 = 15;
+const PRECEDENCE_ASSIGNMENT: u8 = 16;
 
 const UNREACHABLE_INFIX: &str = "operator cannot be used as an infix operator";
 const UNREACHABLE_PREFIX: &str = "operator cannot be used as an prefix operator";
@@ -102,6 +103,12 @@ pub fn op_precedence(operator: Operator, location: OperatorLocation) -> u8 {
         Lesser | Greater | LesserEqual | GreaterEqual => match location {
             OperatorLocation::Prefix => unreachable!("{UNREACHABLE_PREFIX}"),
             OperatorLocation::Infix => PRECEDENCE_COMPARISON,
+            OperatorLocation::Suffix => unreachable!("{UNREACHABLE_SUFFIX}"),
+        },
+        Assign | PlusAssign | MinusAssign | MulAssign | DivAssign | ModAssign | BitAndAssign
+        | BitOrAssign | BitXorAssign | LShiftAssign | RShiftAssign => match location {
+            OperatorLocation::Prefix => unreachable!("{UNREACHABLE_PREFIX}"),
+            OperatorLocation::Infix => PRECEDENCE_ASSIGNMENT,
             OperatorLocation::Suffix => unreachable!("{UNREACHABLE_SUFFIX}"),
         },
     }

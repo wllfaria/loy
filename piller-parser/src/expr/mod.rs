@@ -9,6 +9,13 @@ use crate::ast::*;
 use crate::parser::{ParseContext, consume_optional_comma, parse_identifier};
 use crate::result::{ParseIssue, Result};
 
+fn is_valid_assignment_target(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Ident(_) | Expr::MemberAccess(_) | Expr::ArrayAccess(_)
+    )
+}
+
 pub fn parse_expr_block(ctx: &mut ParseContext<'_>) -> Result<Expr> {
     let mut exprs = vec![];
     let block_start = match ctx.tokens.peek() {
@@ -382,11 +389,26 @@ fn parse_with_precedence_from_lhs(
         }
 
         let next_precedence = op_precedence(op, OperatorLocation::Infix);
-        if next_precedence >= precedence {
+        let should_break = if op.is_right_associative() {
+            next_precedence > precedence // Right-associative
+        } else {
+            next_precedence >= precedence // Left-associative
+        };
+        if should_break {
             break;
         }
 
         ctx.tokens.consume();
+
+        // Validate assignment targets
+        if op.is_right_associative() && !is_valid_assignment_target(&lhs) {
+            let position = lhs.position();
+            return ParseIssue::new("invalid assignment target", position)
+                .with_report_title("syntax error")
+                .with_help("only identifiers, member access, and array access can be assigned to")
+                .into_error();
+        }
+
         let rhs = parse_expression(ctx)?;
         let rhs_with_higher_precedence = parse_with_precedence_from_lhs(ctx, rhs, next_precedence)?;
 

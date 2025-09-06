@@ -354,6 +354,17 @@ pub enum Operator {
     LBracket,
     LBrace,
     Dot,
+    Assign,
+    PlusAssign,
+    MinusAssign,
+    MulAssign,
+    DivAssign,
+    ModAssign,
+    BitAndAssign,
+    BitOrAssign,
+    BitXorAssign,
+    LShiftAssign,
+    RShiftAssign,
 }
 
 impl Operator {
@@ -383,6 +394,17 @@ impl Operator {
             TokenKind::LBracket => Operator::LBracket,
             TokenKind::LBrace => Operator::LBrace,
             TokenKind::Dot => Operator::Dot,
+            TokenKind::Assign => Operator::Assign,
+            TokenKind::PlusAssign => Operator::PlusAssign,
+            TokenKind::MinusAssign => Operator::MinusAssign,
+            TokenKind::MulAssign => Operator::MulAssign,
+            TokenKind::DivAssign => Operator::DivAssign,
+            TokenKind::ModAssign => Operator::ModAssign,
+            TokenKind::BitAndAssign => Operator::BitAndAssign,
+            TokenKind::BitOrAssign => Operator::BitOrAssign,
+            TokenKind::BitXorAssign => Operator::BitXorAssign,
+            TokenKind::LShiftAssign => Operator::LShiftAssign,
+            TokenKind::RShiftAssign => Operator::RShiftAssign,
             _ => unreachable!("token kind cannot be converted into an operator"),
         }
     }
@@ -406,6 +428,34 @@ impl Operator {
                 | Operator::BitXor
                 | Operator::And
                 | Operator::Or
+                | Operator::Assign
+                | Operator::PlusAssign
+                | Operator::MinusAssign
+                | Operator::MulAssign
+                | Operator::DivAssign
+                | Operator::ModAssign
+                | Operator::BitAndAssign
+                | Operator::BitOrAssign
+                | Operator::BitXorAssign
+                | Operator::LShiftAssign
+                | Operator::RShiftAssign
+        )
+    }
+
+    pub fn is_right_associative(self) -> bool {
+        matches!(
+            self,
+            Operator::Assign
+                | Operator::PlusAssign
+                | Operator::MinusAssign
+                | Operator::MulAssign
+                | Operator::DivAssign
+                | Operator::ModAssign
+                | Operator::BitAndAssign
+                | Operator::BitOrAssign
+                | Operator::BitXorAssign
+                | Operator::LShiftAssign
+                | Operator::RShiftAssign
         )
     }
 }

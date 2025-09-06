@@ -7,4 +7,5 @@ fun func() {
         name = "adsad",
         foo = "asd",
     };
+    foo = 1;
 }

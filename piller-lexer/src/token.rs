@@ -218,6 +218,17 @@ impl TokenKind {
                 | TokenKind::LBracket
                 | TokenKind::LBrace
                 | TokenKind::Dot
+                | TokenKind::Assign
+                | TokenKind::PlusAssign
+                | TokenKind::MinusAssign
+                | TokenKind::MulAssign
+                | TokenKind::DivAssign
+                | TokenKind::ModAssign
+                | TokenKind::BitAndAssign
+                | TokenKind::BitOrAssign
+                | TokenKind::BitXorAssign
+                | TokenKind::LShiftAssign
+                | TokenKind::RShiftAssign
         )
     }
 }
