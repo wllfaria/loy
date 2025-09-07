@@ -1,14 +1,9 @@
-import "./other";
-import "./other" as o;
-import "./other" with foo;
-import "./other" with {foo, bar};
-import "./other" as o with {foo, bar};
-
 pub type Result<T, E> = enum {
     Ok(T),
     Err(E),
 }
 
-fun main(): Result<(), Error> {
-    const tuple = (1, 2, 3, "lol");
+pub type Option<T> = enum {
+    Some(T),
+    None,
 }

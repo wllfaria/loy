@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 /// A trait for displaying the source text of a token
 pub trait DisplaySource {
     fn display_source<'a>(&self, source: &'a str) -> &'a str;
@@ -37,6 +39,10 @@ impl Span {
             start: self.start.min(other.start),
             end: self.end.max(other.end),
         }
+    }
+
+    pub fn into_range(&self) -> Range<usize> {
+        self.start..self.end
     }
 }
 

@@ -1,14 +1,47 @@
 #![allow(dead_code)]
 use piller_lexer::{NumericalBitSize, Span, TokenKind};
 
+pub trait AstFmt {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result;
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct Ast {
     statements: Vec<AstNode>,
 }
 
+struct AstDisplay<'a> {
+    ast: &'a Ast,
+    source: &'a str,
+}
+
+impl<'a> std::fmt::Display for AstDisplay<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "<Root>")?;
+
+        for (idx, statement) in self.ast.statements.iter().enumerate() {
+            let is_last = idx == self.ast.statements.len() - 1;
+            statement.fmt_ast(f, self.source, "", is_last)?;
+        }
+
+        Ok(())
+    }
+}
+
 impl Ast {
     pub(crate) fn new(statements: Vec<AstNode>) -> Self {
         Self { statements }
+    }
+
+    pub fn dump(&self, source: &str) -> String {
+        let display = AstDisplay { ast: self, source };
+        format!("{display}")
     }
 }
 
@@ -22,6 +55,16 @@ pub enum TypeDeclKind {
     Struct,
     Enum,
     Interface,
+}
+
+impl std::fmt::Display for TypeDeclKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Struct => write!(f, "struct"),
+            Self::Enum => write!(f, "enum"),
+            Self::Interface => write!(f, "interface"),
+        }
+    }
 }
 
 impl From<TokenKind> for TypeDeclKind {
@@ -45,6 +88,46 @@ pub struct AstNodeTypeDef {
     pub position: Span,
 }
 
+impl AstFmt for AstNodeTypeDef {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        let branch = if is_last { "└─ " } else { "├─ " };
+        write!(f, "{prefix}{branch}")?;
+
+        let name = &source[self.name.position.into_range()];
+        writeln!(f, "Typedef {} <{}>", self.kind, name)?;
+
+        let child_branch = if is_last { "   " } else { "│  " };
+        let child_prefix = format!("{prefix}{child_branch}");
+
+        if !self.generics.is_empty() {
+            writeln!(f, "{child_prefix}├─ with generics:")?;
+
+            for (idx, generic) in self.generics.iter().enumerate() {
+                let is_last = idx == self.generics.len() - 1;
+                let child_prefix = format!("{child_prefix}│  ");
+                generic.fmt_ast(f, source, &child_prefix, is_last)?;
+            }
+        }
+
+        let kind = match self.kind {
+            TypeDeclKind::Enum => "variants",
+            TypeDeclKind::Struct => "fields",
+            TypeDeclKind::Interface => "contract",
+        };
+        writeln!(f, "{child_prefix}└─ with {kind}:")?;
+        let child_prefix = format!("{child_prefix}   ");
+        self.value.fmt_ast(f, source, &child_prefix, true)?;
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeStruct {
     pub visibility: NodeVisibility,
@@ -59,10 +142,52 @@ pub struct AstNodeEnum {
     pub position: Span,
 }
 
+impl AstFmt for AstNodeEnum {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        _: bool,
+    ) -> std::fmt::Result {
+        for (idx, variant) in self.variants.iter().enumerate() {
+            let is_last = idx == self.variants.len() - 1;
+            variant.fmt_ast(f, source, prefix, is_last)?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeEnumVariant {
     pub name: IdentifierExpr,
     pub data: Option<AstNodeTypeAnnotation>,
+}
+
+impl AstFmt for AstNodeEnumVariant {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        let branch = if is_last { "└─ " } else { "├─ " };
+        writeln!(
+            f,
+            "{prefix}{branch}<{}>",
+            &source[self.name.position.into_range()]
+        )?;
+
+        let child_branch = if is_last { "   " } else { "│  " };
+        let child_prefix = format!("{prefix}{child_branch}");
+        if let Some(data) = self.data.as_ref() {
+            data.fmt_ast(f, source, &child_prefix, is_last)?;
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -109,6 +234,18 @@ pub enum PrimitiveTypeKind {
     Integer(NumericalBitSize),
 }
 
+impl AstFmt for PrimitiveTypeKind {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        write!(f, "primitive")
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeNamedType {
     pub name: IdentifierExpr,
@@ -116,10 +253,62 @@ pub struct AstNodeNamedType {
     pub generics: Vec<AstNodeGenericDecl>,
 }
 
+impl AstFmt for AstNodeNamedType {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        let branch = if is_last { "└─ " } else { "├─ " };
+        write!(f, "{prefix}{branch}")?;
+
+        writeln!(f, "<{}>", &source[self.name.position.into_range()])?;
+
+        let child_branch = if is_last { "   " } else { "│  " };
+        let child_prefix = format!("{prefix}{child_branch}");
+
+        if !self.generics.is_empty() {
+            writeln!(f, "{child_prefix}└─ with generics:")?;
+
+            for (idx, generic) in self.generics.iter().enumerate() {
+                let is_last = idx == self.generics.len() - 1;
+                let child_prefix = format!("{child_prefix}   ");
+                generic.fmt_ast(f, source, &child_prefix, is_last)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeTupleType {
     pub types: Vec<AstNodeTypeAnnotation>,
     pub position: Span,
+}
+
+impl AstFmt for AstNodeTupleType {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        _: bool,
+    ) -> std::fmt::Result {
+        writeln!(f, "{prefix}└─ with tuple:")?;
+
+        if !self.types.is_empty() {
+            for (idx, ty) in self.types.iter().enumerate() {
+                let is_last = idx == self.types.len() - 1;
+                let prefix = format!("{prefix}   ");
+                ty.fmt_ast(f, source, &prefix, is_last)?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -135,10 +324,38 @@ pub struct AstNodeTypeAnnotation {
     pub position: Span,
 }
 
+impl AstFmt for AstNodeTypeAnnotation {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        match &self.kind {
+            AstNodeTypeKind::Primitive(node) => node.fmt_ast(f, source, prefix, is_last),
+            AstNodeTypeKind::Named(node) => node.fmt_ast(f, source, prefix, is_last),
+            AstNodeTypeKind::Tuple(node) => node.fmt_ast(f, source, prefix, is_last),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeGenericDecl {
     pub position: Span,
     pub ty: AstNodeTypeAnnotation,
+}
+
+impl AstFmt for AstNodeGenericDecl {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        self.ty.fmt_ast(f, source, prefix, is_last)
+    }
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -222,6 +439,25 @@ impl AstNode {
             AstNode::Function(node) => node.visibility = visibility,
             // imports have no visibility modifiers
             AstNode::Import(_) => {}
+        }
+    }
+}
+
+impl AstFmt for AstNode {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        match self {
+            AstNode::TypeDef(node) => node.fmt_ast(f, source, prefix, is_last),
+            AstNode::Struct(node) => todo!(),
+            AstNode::Enum(node) => node.fmt_ast(f, source, prefix, is_last),
+            AstNode::Interface(node) => todo!(),
+            AstNode::Function(node) => todo!(),
+            AstNode::Import(node) => todo!(),
         }
     }
 }

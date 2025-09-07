@@ -1,5 +1,5 @@
 use miette::NamedSource;
-use piller_parser::ParseContext;
+use piller_parser::{AstFmt, ParseContext};
 
 fn main() -> miette::Result<()> {
     let args = std::env::args().collect::<Vec<_>>();
@@ -17,7 +17,7 @@ fn main() -> miette::Result<()> {
     });
 
     match result {
-        Ok(ast) => println!("{ast:#?}"),
+        Ok(ast) => println!("{}", ast.dump(&source)),
         Err(error) => {
             let report = error
                 .into_report()
