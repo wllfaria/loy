@@ -89,6 +89,8 @@ fn parse_function_arguments(ctx: &mut ParseContext<'_>) -> Result<Vec<AstNodeFun
         let name = parse_identifier(ctx)?;
         assert!(ctx.tokens.next() == TokenKind::Colon);
         let ty = parse_type_annotation(ctx)?;
+        let position = name.position.merge(ty.position);
+        args.push(AstNodeFunArg { name, ty, position });
 
         match ctx.tokens.peek() {
             TokenKind::RParen => break,
@@ -108,9 +110,6 @@ fn parse_function_arguments(ctx: &mut ParseContext<'_>) -> Result<Vec<AstNodeFun
                     .into_error();
             }
         }
-
-        let position = name.position.merge(ty.position);
-        args.push(AstNodeFunArg { name, ty, position })
     }
 
     Ok(args)

@@ -1,9 +1,19 @@
 pub type Result<T, E> = enum {
     Ok(T),
-    Err(E),
+    Err(E, R),
 }
 
 pub type Option<T> = enum {
     Some(T),
     None,
+}
+
+pub type Point<T> = struct {
+    x: T,
+    y: T<(A,B)>,
+}
+
+pub type Iterable<T> = interface {
+    fun next<K>(this: This): Option<T>;
+    fun has_next(this: This): bool;
 }

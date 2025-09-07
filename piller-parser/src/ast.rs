@@ -135,6 +135,23 @@ pub struct AstNodeStruct {
     pub position: Span,
 }
 
+impl AstFmt for AstNodeStruct {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        _: bool,
+    ) -> std::fmt::Result {
+        for (idx, field) in self.fields.iter().enumerate() {
+            let is_last = idx == self.fields.len() - 1;
+            field.fmt_ast(f, source, prefix, is_last)?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeEnum {
     pub visibility: NodeVisibility,
@@ -199,6 +216,56 @@ pub struct AstNodeFunSignature {
     pub position: Span,
 }
 
+impl AstFmt for AstNodeFunSignature {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        let branch = if is_last { "└─ " } else { "├─ " };
+        writeln!(
+            f,
+            "{prefix}{branch}Function <{}>",
+            &source[self.name.position.into_range()]
+        )?;
+
+        let child_branch = if is_last { "   " } else { "│  " };
+        let child_prefix = format!("{prefix}{child_branch}");
+        writeln!(f, "{child_prefix}├─ returning:")?;
+
+        match self.return_ty.as_ref() {
+            Some(return_ty) => {
+                let child_prefix = format!("{child_prefix}│  ");
+                return_ty.fmt_ast(f, source, &child_prefix, true)?;
+            }
+            None => write!(f, "void")?,
+        };
+
+        if !self.generics.is_empty() {
+            writeln!(f, "{child_prefix}├─ with generics:")?;
+            for (idx, generic) in self.generics.iter().enumerate() {
+                let is_last = idx == self.generics.len() - 1;
+                let child_prefix = format!("{child_prefix}│  ");
+                generic.fmt_ast(f, source, &child_prefix, is_last)?;
+            }
+        }
+
+        if !self.args.is_empty() {
+            writeln!(f, "{child_prefix}└─ with args:")?;
+            for (idx, arg) in self.args.iter().enumerate() {
+                let is_last = idx == self.args.len() - 1;
+                let child_branch = if is_last { "   " } else { "│  " };
+                let child_prefix = format!("{child_prefix}{child_branch}");
+                arg.fmt_ast(f, source, &child_prefix, is_last)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl AstNodeFunSignature {
     pub fn into_function_decl(self, body: Expr) -> AstNodeFun {
         AstNodeFun {
@@ -220,11 +287,51 @@ pub struct AstNodeInterface {
     pub position: Span,
 }
 
+impl AstFmt for AstNodeInterface {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        for (idx, function) in self.functions.iter().enumerate() {
+            let is_last = idx == self.functions.len() - 1;
+            function.fmt_ast(f, source, prefix, is_last)?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeStructField {
     pub name: IdentifierExpr,
     pub ty: AstNodeTypeAnnotation,
     pub position: Span,
+}
+
+impl AstFmt for AstNodeStructField {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        let branch = if is_last { "└─ " } else { "├─ " };
+        writeln!(
+            f,
+            "{prefix}{branch}<{}> with type:",
+            &source[self.name.position.into_range()]
+        )?;
+
+        let child_branch = if is_last { "   " } else { "│  " };
+        let child_prefix = format!("{prefix}{child_branch}");
+        self.ty.fmt_ast(f, source, &child_prefix, true)?;
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -264,19 +371,20 @@ impl AstFmt for AstNodeNamedType {
         let branch = if is_last { "└─ " } else { "├─ " };
         write!(f, "{prefix}{branch}")?;
 
-        writeln!(f, "<{}>", &source[self.name.position.into_range()])?;
+        write!(f, "<{}>", &source[self.name.position.into_range()])?;
 
         let child_branch = if is_last { "   " } else { "│  " };
         let child_prefix = format!("{prefix}{child_branch}");
 
         if !self.generics.is_empty() {
-            writeln!(f, "{child_prefix}└─ with generics:")?;
+            writeln!(f, " with generics:")?;
 
             for (idx, generic) in self.generics.iter().enumerate() {
                 let is_last = idx == self.generics.len() - 1;
-                let child_prefix = format!("{child_prefix}   ");
                 generic.fmt_ast(f, source, &child_prefix, is_last)?;
             }
+        } else {
+            writeln!(f)?;
         }
 
         Ok(())
@@ -297,13 +405,10 @@ impl AstFmt for AstNodeTupleType {
         prefix: &str,
         _: bool,
     ) -> std::fmt::Result {
-        writeln!(f, "{prefix}└─ with tuple:")?;
-
         if !self.types.is_empty() {
             for (idx, ty) in self.types.iter().enumerate() {
                 let is_last = idx == self.types.len() - 1;
-                let prefix = format!("{prefix}   ");
-                ty.fmt_ast(f, source, &prefix, is_last)?;
+                ty.fmt_ast(f, source, prefix, is_last)?;
             }
         }
 
@@ -374,6 +479,29 @@ pub struct AstNodeFunArg {
     pub name: IdentifierExpr,
     pub ty: AstNodeTypeAnnotation,
     pub position: Span,
+}
+
+impl AstFmt for AstNodeFunArg {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        let branch = if is_last { "└─ " } else { "├─ " };
+        writeln!(
+            f,
+            "{prefix}{branch}<{}> with type:",
+            &source[self.name.position.into_range()]
+        )?;
+
+        let child_branch = if is_last { "   " } else { "│  " };
+        let child_prefix = format!("{prefix}{child_branch}");
+        self.ty.fmt_ast(f, source, &child_prefix, true)?;
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -453,9 +581,9 @@ impl AstFmt for AstNode {
     ) -> std::fmt::Result {
         match self {
             AstNode::TypeDef(node) => node.fmt_ast(f, source, prefix, is_last),
-            AstNode::Struct(node) => todo!(),
+            AstNode::Struct(node) => node.fmt_ast(f, source, prefix, is_last),
             AstNode::Enum(node) => node.fmt_ast(f, source, prefix, is_last),
-            AstNode::Interface(node) => todo!(),
+            AstNode::Interface(node) => node.fmt_ast(f, source, prefix, is_last),
             AstNode::Function(node) => todo!(),
             AstNode::Import(node) => todo!(),
         }
