@@ -81,19 +81,18 @@ fn parse_import_methods(ctx: &mut ParseContext<'_>) -> Result<AstNodeImportMetho
             Ok(AstNodeImportMethods { position, methods })
         }
         _ => {
-            let methods = vec![parse_identifier(ctx)?];
+            let methods = vec![parse_import_method(ctx)?];
             let position = with_token.position.merge(methods[0].position);
             Ok(AstNodeImportMethods { position, methods })
         }
     }
 }
 
-fn parse_import_method_list(ctx: &mut ParseContext<'_>) -> Result<Vec<IdentifierExpr>> {
+fn parse_import_method_list(ctx: &mut ParseContext<'_>) -> Result<Vec<AstNodeImportMethod>> {
     let mut methods = vec![];
 
     while !matches!(ctx.tokens.peek(), TokenKind::RBrace | TokenKind::Eof) {
-        let name = parse_identifier(ctx)?;
-        methods.push(name);
+        methods.push(parse_import_method(ctx)?);
 
         match ctx.tokens.peek() {
             TokenKind::Comma => ctx.tokens.consume(),
@@ -115,4 +114,25 @@ fn parse_import_method_list(ctx: &mut ParseContext<'_>) -> Result<Vec<Identifier
     }
 
     Ok(methods)
+}
+
+fn parse_import_method(ctx: &mut ParseContext<'_>) -> Result<AstNodeImportMethod> {
+    let name = parse_identifier(ctx)?;
+    let alias = if matches!(ctx.tokens.peek(), TokenKind::As) {
+        ctx.tokens.consume();
+        Some(parse_identifier(ctx)?)
+    } else {
+        None
+    };
+
+    let position = match alias {
+        Some(alias) => name.position.merge(alias.position),
+        None => name.position,
+    };
+
+    Ok(AstNodeImportMethod {
+        name,
+        alias,
+        position,
+    })
 }

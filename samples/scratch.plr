@@ -1,21 +1,15 @@
-pub type Result<T, E> = enum {
-    Ok(T),
-    Err(E, R),
+import "./path" as K with {foo as bar, bar as foo};
+
+type Foo = interface {
+    fun a();
 }
 
-pub type Option<T> = enum {
-    Some(T),
-    None,
+fun foo<T>(args: usize) {
+    if ((1 * 4 + 3) - --3 + 2,2,3) {
+        [1,2,3];
+    } else if true {
+        ();
+    } else {
+        [];
+    }
 }
-
-pub type Point<T> = struct {
-    x: T,
-    y: T<(A,B)>,
-}
-
-pub type Iterable<T> = interface {
-    fun next<K>(this: This): Option<T>;
-    fun has_next(this: This): bool;
-}
-
-import "./path" as K;

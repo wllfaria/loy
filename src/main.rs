@@ -1,4 +1,4 @@
-use loy_parser::{AstFmt, ParseContext};
+use loy_parser::ParseContext;
 use miette::NamedSource;
 
 fn main() -> miette::Result<()> {

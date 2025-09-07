@@ -1,37 +1,9 @@
 #![allow(dead_code)]
 use loy_lexer::{NumericalBitSize, Span, TokenKind};
 
-pub trait AstFmt {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result;
-}
-
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct Ast {
-    statements: Vec<AstNode>,
-}
-
-struct AstDisplay<'a> {
-    ast: &'a Ast,
-    source: &'a str,
-}
-
-impl<'a> std::fmt::Display for AstDisplay<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "<Root>")?;
-
-        for (idx, statement) in self.ast.statements.iter().enumerate() {
-            let is_last = idx == self.ast.statements.len() - 1;
-            statement.fmt_ast(f, self.source, "", is_last)?;
-        }
-
-        Ok(())
-    }
+    pub statements: Vec<AstNode>,
 }
 
 impl Ast {
@@ -40,7 +12,7 @@ impl Ast {
     }
 
     pub fn dump(&self, source: &str) -> String {
-        let display = AstDisplay { ast: self, source };
+        let display = crate::ast_fmt::AstDisplay { ast: self, source };
         format!("{display}")
     }
 }
@@ -88,68 +60,11 @@ pub struct AstNodeTypeDef {
     pub position: Span,
 }
 
-impl AstFmt for AstNodeTypeDef {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        let branch = if is_last { "└─ " } else { "├─ " };
-        write!(f, "{prefix}{branch}")?;
-
-        let name = &source[self.name.position.into_range()];
-        writeln!(f, "Typedef {} <{}>", self.kind, name)?;
-
-        let child_branch = if is_last { "   " } else { "│  " };
-        let child_prefix = format!("{prefix}{child_branch}");
-
-        if !self.generics.is_empty() {
-            writeln!(f, "{child_prefix}├─ with generics:")?;
-
-            for (idx, generic) in self.generics.iter().enumerate() {
-                let is_last = idx == self.generics.len() - 1;
-                let child_prefix = format!("{child_prefix}│  ");
-                generic.fmt_ast(f, source, &child_prefix, is_last)?;
-            }
-        }
-
-        let kind = match self.kind {
-            TypeDeclKind::Enum => "variants",
-            TypeDeclKind::Struct => "fields",
-            TypeDeclKind::Interface => "contract",
-        };
-        writeln!(f, "{child_prefix}└─ with {kind}:")?;
-        let child_prefix = format!("{child_prefix}   ");
-        self.value.fmt_ast(f, source, &child_prefix, true)?;
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeStruct {
     pub visibility: NodeVisibility,
     pub fields: Vec<AstNodeStructField>,
     pub position: Span,
-}
-
-impl AstFmt for AstNodeStruct {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        _: bool,
-    ) -> std::fmt::Result {
-        for (idx, field) in self.fields.iter().enumerate() {
-            let is_last = idx == self.fields.len() - 1;
-            field.fmt_ast(f, source, prefix, is_last)?;
-        }
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -159,52 +74,10 @@ pub struct AstNodeEnum {
     pub position: Span,
 }
 
-impl AstFmt for AstNodeEnum {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        _: bool,
-    ) -> std::fmt::Result {
-        for (idx, variant) in self.variants.iter().enumerate() {
-            let is_last = idx == self.variants.len() - 1;
-            variant.fmt_ast(f, source, prefix, is_last)?;
-        }
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeEnumVariant {
     pub name: IdentifierExpr,
     pub data: Option<AstNodeTypeAnnotation>,
-}
-
-impl AstFmt for AstNodeEnumVariant {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        let branch = if is_last { "└─ " } else { "├─ " };
-        writeln!(
-            f,
-            "{prefix}{branch}<{}>",
-            &source[self.name.position.into_range()]
-        )?;
-
-        let child_branch = if is_last { "   " } else { "│  " };
-        let child_prefix = format!("{prefix}{child_branch}");
-        if let Some(data) = self.data.as_ref() {
-            data.fmt_ast(f, source, &child_prefix, is_last)?;
-        }
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -214,56 +87,6 @@ pub struct AstNodeFunSignature {
     pub args: Vec<AstNodeFunArg>,
     pub return_ty: Option<AstNodeTypeAnnotation>,
     pub position: Span,
-}
-
-impl AstFmt for AstNodeFunSignature {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        let branch = if is_last { "└─ " } else { "├─ " };
-        writeln!(
-            f,
-            "{prefix}{branch}Function <{}>",
-            &source[self.name.position.into_range()]
-        )?;
-
-        let child_branch = if is_last { "   " } else { "│  " };
-        let child_prefix = format!("{prefix}{child_branch}");
-        writeln!(f, "{child_prefix}├─ returning:")?;
-
-        match self.return_ty.as_ref() {
-            Some(return_ty) => {
-                let child_prefix = format!("{child_prefix}│  ");
-                return_ty.fmt_ast(f, source, &child_prefix, true)?;
-            }
-            None => write!(f, "void")?,
-        };
-
-        if !self.generics.is_empty() {
-            writeln!(f, "{child_prefix}├─ with generics:")?;
-            for (idx, generic) in self.generics.iter().enumerate() {
-                let is_last = idx == self.generics.len() - 1;
-                let child_prefix = format!("{child_prefix}│  ");
-                generic.fmt_ast(f, source, &child_prefix, is_last)?;
-            }
-        }
-
-        if !self.args.is_empty() {
-            writeln!(f, "{child_prefix}└─ with args:")?;
-            for (idx, arg) in self.args.iter().enumerate() {
-                let is_last = idx == self.args.len() - 1;
-                let child_branch = if is_last { "   " } else { "│  " };
-                let child_prefix = format!("{child_prefix}{child_branch}");
-                arg.fmt_ast(f, source, &child_prefix, is_last)?;
-            }
-        }
-
-        Ok(())
-    }
 }
 
 impl AstNodeFunSignature {
@@ -287,51 +110,11 @@ pub struct AstNodeInterface {
     pub position: Span,
 }
 
-impl AstFmt for AstNodeInterface {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        for (idx, function) in self.functions.iter().enumerate() {
-            let is_last = idx == self.functions.len() - 1;
-            function.fmt_ast(f, source, prefix, is_last)?;
-        }
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeStructField {
     pub name: IdentifierExpr,
     pub ty: AstNodeTypeAnnotation,
     pub position: Span,
-}
-
-impl AstFmt for AstNodeStructField {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        let branch = if is_last { "└─ " } else { "├─ " };
-        writeln!(
-            f,
-            "{prefix}{branch}<{}> with type:",
-            &source[self.name.position.into_range()]
-        )?;
-
-        let child_branch = if is_last { "   " } else { "│  " };
-        let child_prefix = format!("{prefix}{child_branch}");
-        self.ty.fmt_ast(f, source, &child_prefix, true)?;
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -341,18 +124,6 @@ pub enum PrimitiveTypeKind {
     Integer(NumericalBitSize),
 }
 
-impl AstFmt for PrimitiveTypeKind {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        write!(f, "primitive")
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeNamedType {
     pub name: IdentifierExpr,
@@ -360,60 +131,10 @@ pub struct AstNodeNamedType {
     pub generics: Vec<AstNodeGenericDecl>,
 }
 
-impl AstFmt for AstNodeNamedType {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        let branch = if is_last { "└─ " } else { "├─ " };
-        write!(f, "{prefix}{branch}")?;
-
-        write!(f, "<{}>", &source[self.name.position.into_range()])?;
-
-        let child_branch = if is_last { "   " } else { "│  " };
-        let child_prefix = format!("{prefix}{child_branch}");
-
-        if !self.generics.is_empty() {
-            writeln!(f, " with generics:")?;
-
-            for (idx, generic) in self.generics.iter().enumerate() {
-                let is_last = idx == self.generics.len() - 1;
-                generic.fmt_ast(f, source, &child_prefix, is_last)?;
-            }
-        } else {
-            writeln!(f)?;
-        }
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeTupleType {
     pub types: Vec<AstNodeTypeAnnotation>,
     pub position: Span,
-}
-
-impl AstFmt for AstNodeTupleType {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        _: bool,
-    ) -> std::fmt::Result {
-        if !self.types.is_empty() {
-            for (idx, ty) in self.types.iter().enumerate() {
-                let is_last = idx == self.types.len() - 1;
-                ty.fmt_ast(f, source, prefix, is_last)?;
-            }
-        }
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -429,38 +150,10 @@ pub struct AstNodeTypeAnnotation {
     pub position: Span,
 }
 
-impl AstFmt for AstNodeTypeAnnotation {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        match &self.kind {
-            AstNodeTypeKind::Primitive(node) => node.fmt_ast(f, source, prefix, is_last),
-            AstNodeTypeKind::Named(node) => node.fmt_ast(f, source, prefix, is_last),
-            AstNodeTypeKind::Tuple(node) => node.fmt_ast(f, source, prefix, is_last),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeGenericDecl {
     pub position: Span,
     pub ty: AstNodeTypeAnnotation,
-}
-
-impl AstFmt for AstNodeGenericDecl {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        self.ty.fmt_ast(f, source, prefix, is_last)
-    }
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -481,29 +174,6 @@ pub struct AstNodeFunArg {
     pub position: Span,
 }
 
-impl AstFmt for AstNodeFunArg {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        let branch = if is_last { "└─ " } else { "├─ " };
-        writeln!(
-            f,
-            "{prefix}{branch}<{}> with type:",
-            &source[self.name.position.into_range()]
-        )?;
-
-        let child_branch = if is_last { "   " } else { "│  " };
-        let child_prefix = format!("{prefix}{child_branch}");
-        self.ty.fmt_ast(f, source, &child_prefix, true)?;
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeImportPath {
     pub position: Span,
@@ -516,8 +186,15 @@ pub struct AstNodeImportAlias {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeImportMethod {
+    pub name: IdentifierExpr,
+    pub alias: Option<IdentifierExpr>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeImportMethods {
-    pub methods: Vec<IdentifierExpr>,
+    pub methods: Vec<AstNodeImportMethod>,
     pub position: Span,
 }
 
@@ -527,57 +204,6 @@ pub struct AstNodeImport {
     pub alias: Option<AstNodeImportAlias>,
     pub methods: Option<AstNodeImportMethods>,
     pub position: Span,
-}
-
-impl AstFmt for AstNodeImport {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        let branch = if is_last { "└─ " } else { "├─ " };
-        write!(f, "{prefix}{branch}")?;
-
-        writeln!(
-            f,
-            "Import <\"{}\">",
-            &source[self.path.position.into_range()]
-        )?;
-
-        let child_prefix = format!("{prefix}   ");
-
-        if let Some(alias) = self.alias.as_ref() {
-            let branch = if self.methods.is_some() { "├─ " } else { "└─ " };
-            writeln!(f, "{child_prefix}{branch}with alias:")?;
-            let child_prefix = if self.methods.is_some() { "│  " } else { "   " };
-            writeln!(
-                f,
-                "   {child_prefix}└─ {}",
-                &source[alias.name.position.into_range()]
-            )?;
-        }
-
-        if let Some(methods) = self.methods.as_ref() {
-            let prefix = format!("{prefix}   └─ ");
-            let label = if methods.methods.len() > 1 { "with methods" } else { "with method" };
-            writeln!(f, "{prefix}{label}:")?;
-
-            for (idx, method) in methods.methods.iter().enumerate() {
-                let is_last = idx == methods.methods.len() - 1;
-                let child_branch = if is_last { "└─ " } else { "├─ " };
-                let child_prefix = format!("{child_prefix}{child_branch}");
-                writeln!(
-                    f,
-                    "   {child_prefix}<{}>",
-                    &source[method.position.into_range()]
-                )?;
-            }
-        }
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -622,25 +248,6 @@ impl AstNode {
     }
 }
 
-impl AstFmt for AstNode {
-    fn fmt_ast(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-        source: &str,
-        prefix: &str,
-        is_last: bool,
-    ) -> std::fmt::Result {
-        match self {
-            AstNode::TypeDef(node) => node.fmt_ast(f, source, prefix, is_last),
-            AstNode::Struct(node) => node.fmt_ast(f, source, prefix, is_last),
-            AstNode::Enum(node) => node.fmt_ast(f, source, prefix, is_last),
-            AstNode::Interface(node) => node.fmt_ast(f, source, prefix, is_last),
-            AstNode::Function(node) => todo!(),
-            AstNode::Import(node) => node.fmt_ast(f, source, prefix, is_last),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct BlockExpr {
     pub position: Span,
@@ -667,6 +274,16 @@ pub enum NumberKindExpr {
     Unsigned(u64),
     Signed(i64),
     Float(f64),
+}
+
+impl std::fmt::Display for NumberKindExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NumberKindExpr::Unsigned(val) => write!(f, "{val}"),
+            NumberKindExpr::Signed(val) => write!(f, "{val}"),
+            NumberKindExpr::Float(val) => write!(f, "{val}"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -989,5 +606,47 @@ impl Operator {
                 | Operator::LShiftAssign
                 | Operator::RShiftAssign
         )
+    }
+}
+
+impl std::fmt::Display for Operator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Operator::Minus => write!(f, "-"),
+            Operator::Star => write!(f, "*"),
+            Operator::Div => write!(f, "/"),
+            Operator::Plus => write!(f, "+"),
+            Operator::Mod => write!(f, "%"),
+            Operator::Increment => write!(f, "++"),
+            Operator::Decrement => write!(f, "--"),
+            Operator::Equal => write!(f, "=="),
+            Operator::NotEqual => write!(f, "!="),
+            Operator::Lesser => write!(f, "<"),
+            Operator::Greater => write!(f, ">"),
+            Operator::LesserEqual => write!(f, "<="),
+            Operator::GreaterEqual => write!(f, ">="),
+            Operator::Not => write!(f, "!"),
+            Operator::Or => write!(f, "||"),
+            Operator::And => write!(f, "&&"),
+            Operator::BitNot => write!(f, "~"),
+            Operator::BitAnd => write!(f, "&"),
+            Operator::BitOr => write!(f, "|"),
+            Operator::BitXor => write!(f, "^"),
+            Operator::LParen => write!(f, "("),
+            Operator::LBracket => write!(f, "["),
+            Operator::LBrace => write!(f, "{{"),
+            Operator::Dot => write!(f, "."),
+            Operator::Assign => write!(f, "="),
+            Operator::PlusAssign => write!(f, "+="),
+            Operator::MinusAssign => write!(f, "-="),
+            Operator::MulAssign => write!(f, "*="),
+            Operator::DivAssign => write!(f, "/="),
+            Operator::ModAssign => write!(f, "%="),
+            Operator::BitAndAssign => write!(f, "&="),
+            Operator::BitOrAssign => write!(f, "|="),
+            Operator::BitXorAssign => write!(f, "^="),
+            Operator::LShiftAssign => write!(f, "<<="),
+            Operator::RShiftAssign => write!(f, ">>="),
+        }
     }
 }
