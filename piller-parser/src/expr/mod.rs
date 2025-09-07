@@ -6,7 +6,7 @@ use precedence::{OperatorLocation, PRECEDENCE_BASE, op_precedence};
 use validation::{get_operator_context, get_valid_prefix_operators};
 
 use crate::ast::*;
-use crate::parser::{ParseContext, consume_optional_comma, parse_identifier};
+use crate::parser::{ParseContext, parse_identifier, parse_type_annotation};
 use crate::result::{ParseIssue, Result};
 
 fn is_valid_assignment_target(expr: &Expr) -> bool {
@@ -121,6 +121,12 @@ fn parse_postfix_expr(ctx: &mut ParseContext<'_>, mut lhs: Expr) -> Result<Expr>
     Ok(lhs)
 }
 
+pub fn consume_optional_comma(ctx: &mut ParseContext<'_>) {
+    if matches!(ctx.tokens.peek(), TokenKind::Comma) {
+        ctx.tokens.consume();
+    }
+}
+
 fn parse_function_call(ctx: &mut ParseContext<'_>, callee: Expr) -> Result<Expr> {
     assert!(ctx.tokens.next() == TokenKind::LParen);
     let mut args = vec![];
@@ -225,6 +231,7 @@ fn parse_primary_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
         TokenKind::Bool(_) => Ok(parse_bool_literal(ctx)),
         TokenKind::String => Ok(parse_string_literal(ctx)),
         TokenKind::LBracket => parse_array_literal(ctx),
+        TokenKind::LParen => parse_tuple_or_parenthesized_expr(ctx),
         TokenKind::Identifier => Ok(Expr::Ident(parse_identifier(ctx)?)),
         TokenKind::LBrace => parse_expr_block(ctx),
         TokenKind::Constant => parse_binding_decl(ctx, BindingMutability::Immutable),
@@ -241,12 +248,11 @@ fn parse_primary_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
 }
 
 fn parse_binding_decl(ctx: &mut ParseContext<'_>, mutability: BindingMutability) -> Result<Expr> {
-    use crate::parser::parse_type_annotation;
-
     let keyword = ctx.tokens.next_token();
     let name = parse_identifier(ctx)?;
 
     let ty = if matches!(ctx.tokens.peek(), TokenKind::Colon) {
+        ctx.tokens.consume();
         Some(parse_type_annotation(ctx)?)
     } else {
         None
@@ -678,4 +684,96 @@ fn parse_continue_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
     };
 
     Ok(Expr::Continue(ContinueExpr { position }))
+}
+
+fn parse_tuple_or_parenthesized_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
+    let lparen = ctx.tokens.next_token();
+    debug_assert!(lparen.kind == TokenKind::LParen);
+
+    // no expression inside of parenthesis, this is a unit value `()` (empty tuple)
+    if matches!(ctx.tokens.peek(), TokenKind::RParen) {
+        return Ok(Expr::Tuple(TupleExpr {
+            elements: vec![],
+            position: lparen.position.merge(ctx.tokens.next_token().position),
+        }));
+    }
+
+    let first_expr = parse_expression(ctx)?;
+
+    // simply a parenthesized expression (expr), not a tuple
+    if matches!(ctx.tokens.peek(), TokenKind::RParen) {
+        ctx.tokens.consume();
+        return Ok(first_expr);
+    }
+
+    if matches!(ctx.tokens.peek(), TokenKind::Eof) {
+        let position = ctx.tokens.peek_prev_token().position;
+        return ParseIssue::new("unterminated parenthesized expression", position)
+            .with_report_title("unexpected end of file (EOF)")
+            .with_help("did you forget a closing paren `)`?")
+            .into_error();
+    }
+
+    // if the expression is not immediately closed or invalid due to EOF, then it can either be a
+    // tuple or an invalid syntax.
+    if !matches!(ctx.tokens.peek(), TokenKind::Comma) {
+        let kind = ctx.tokens.peek();
+        let position = ctx.tokens.peek_prev_token().position;
+        let message = format!("unexpected token, expected `,` or `)`. But found `{kind}`");
+        return ParseIssue::new(message, position)
+            .with_report_title("syntax error")
+            .into_error();
+    }
+
+    debug_assert!(ctx.tokens.peek() == TokenKind::Comma);
+    ctx.tokens.consume(); // consume comma
+
+    let mut elements = vec![first_expr];
+
+    // since we found a comma after the first expressionm, this is a tuple and a comma separated
+    // list of expressions should be parsed
+    while !matches!(ctx.tokens.peek(), TokenKind::RParen | TokenKind::Eof) {
+        elements.push(parse_expression(ctx)?);
+
+        match ctx.tokens.peek() {
+            TokenKind::RParen => break,
+            TokenKind::Comma => consume_optional_comma(ctx),
+            TokenKind::Eof => {
+                let position = ctx.tokens.peek_prev_token().position;
+                return ParseIssue::new("unterminated tuple literal", position)
+                    .with_report_title("unexpected end of file (EOF)")
+                    .with_help("did you forget a closing paren `)`?")
+                    .into_error();
+            }
+            kind => {
+                let position = ctx.tokens.peek_prev_token().position;
+                let message = format!("unexpected token, expected `,` or `)`. But found `{kind}`");
+                return ParseIssue::new(message, position)
+                    .with_report_title("syntax error")
+                    .into_error();
+            }
+        }
+    }
+
+    let rparen = match ctx.tokens.peek() {
+        TokenKind::RParen => ctx.tokens.next_token(),
+        TokenKind::Eof => {
+            let position = ctx.tokens.peek_prev_token().position;
+            return ParseIssue::new("unterminated tuple literal", position)
+                .with_report_title("unexpected end of file (EOF)")
+                .with_help("did you forget a closing paren `)`?")
+                .into_error();
+        }
+        kind => {
+            let position = ctx.tokens.peek_prev_token().position;
+            let message =
+                format!("unexpected token, expected `)` (RIGHT_PAREN). But found `{kind}`");
+            return ParseIssue::new(message, position)
+                .with_report_title("syntax error")
+                .into_error();
+        }
+    };
+
+    let position = lparen.position.merge(rparen.position);
+    Ok(Expr::Tuple(TupleExpr { elements, position }))
 }

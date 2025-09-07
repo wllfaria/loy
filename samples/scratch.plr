@@ -1,11 +1,8 @@
-type Foo = struct {
-    name: string,
+type Result<T, E> = enum {
+    Ok(T),
+    Err(E),
 }
 
-fun func() {
-    var foo = Foo{
-        name = "adsad",
-        foo = "asd",
-    };
-    foo = 1;
+fun main(): Result<(), Error> {
+    const tuple = (1, 2, 3, "lol");
 }

@@ -51,6 +51,18 @@ pub struct AstNodeStruct {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeEnum {
+    pub variants: Vec<AstNodeEnumVariant>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeEnumVariant {
+    pub name: IdentifierExpr,
+    pub data: Option<AstNodeTypeAnnotation>,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeFunSignature {
     pub name: IdentifierExpr,
     pub generics: Vec<AstNodeGenericDecl>,
@@ -100,9 +112,16 @@ pub struct AstNodeNamedType {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeTupleType {
+    pub types: Vec<AstNodeTypeAnnotation>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum AstNodeTypeKind {
     Primitive(PrimitiveTypeKind),
     Named(AstNodeNamedType),
+    Tuple(AstNodeTupleType),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -114,8 +133,7 @@ pub struct AstNodeTypeAnnotation {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeGenericDecl {
     pub position: Span,
-    pub name: IdentifierExpr,
-    pub generics: Vec<AstNodeGenericDecl>,
+    pub ty: AstNodeTypeAnnotation,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -139,6 +157,7 @@ pub struct AstNodeFunArg {
 pub enum AstNode {
     TypeDecl(AstNodeTypeDecl),
     Struct(AstNodeStruct),
+    Enum(AstNodeEnum),
     Interface(AstNodeInterface),
     Function(AstNodeFun),
 }
@@ -148,6 +167,7 @@ impl AstNode {
         match self {
             AstNode::TypeDecl(node) => node.position,
             AstNode::Struct(node) => node.position,
+            AstNode::Enum(node) => node.position,
             AstNode::Interface(node) => node.position,
             AstNode::Function(node) => node.position,
         }
@@ -201,6 +221,12 @@ pub struct StringExpr {
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct ArrayExpr {
+    pub elements: Vec<Expr>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct TupleExpr {
     pub elements: Vec<Expr>,
     pub position: Span,
 }
@@ -309,6 +335,7 @@ pub enum Expr {
     Bool(BoolExpr),
     String(StringExpr),
     Array(ArrayExpr),
+    Tuple(TupleExpr),
     Binary(BinaryExpr),
     Unary(UnaryExpr),
     FunctionCall(FunctionCallExpr),
@@ -334,6 +361,7 @@ impl Expr {
             Self::Bool(node) => node.position,
             Self::String(node) => node.position,
             Self::Array(node) => node.position,
+            Self::Tuple(node) => node.position,
             Self::Binary(node) => node.position,
             Self::Unary(node) => node.position,
             Self::FunctionCall(node) => node.position,
