@@ -17,3 +17,5 @@ pub type Iterable<T> = interface {
     fun next<K>(this: This): Option<T>;
     fun has_next(this: This): bool;
 }
+
+import "./path" as K;

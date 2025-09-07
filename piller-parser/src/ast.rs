@@ -529,6 +529,57 @@ pub struct AstNodeImport {
     pub position: Span,
 }
 
+impl AstFmt for AstNodeImport {
+    fn fmt_ast(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        source: &str,
+        prefix: &str,
+        is_last: bool,
+    ) -> std::fmt::Result {
+        let branch = if is_last { "└─ " } else { "├─ " };
+        write!(f, "{prefix}{branch}")?;
+
+        writeln!(
+            f,
+            "Import <\"{}\">",
+            &source[self.path.position.into_range()]
+        )?;
+
+        let child_prefix = format!("{prefix}   ");
+
+        if let Some(alias) = self.alias.as_ref() {
+            let branch = if self.methods.is_some() { "├─ " } else { "└─ " };
+            writeln!(f, "{child_prefix}{branch}with alias:")?;
+            let child_prefix = if self.methods.is_some() { "│  " } else { "   " };
+            writeln!(
+                f,
+                "   {child_prefix}└─ {}",
+                &source[alias.name.position.into_range()]
+            )?;
+        }
+
+        if let Some(methods) = self.methods.as_ref() {
+            let prefix = format!("{prefix}   └─ ");
+            let label = if methods.methods.len() > 1 { "with methods" } else { "with method" };
+            writeln!(f, "{prefix}{label}:")?;
+
+            for (idx, method) in methods.methods.iter().enumerate() {
+                let is_last = idx == methods.methods.len() - 1;
+                let child_branch = if is_last { "└─ " } else { "├─ " };
+                let child_prefix = format!("{child_prefix}{child_branch}");
+                writeln!(
+                    f,
+                    "   {child_prefix}<{}>",
+                    &source[method.position.into_range()]
+                )?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum NodeVisibility {
     #[default]
@@ -585,7 +636,7 @@ impl AstFmt for AstNode {
             AstNode::Enum(node) => node.fmt_ast(f, source, prefix, is_last),
             AstNode::Interface(node) => node.fmt_ast(f, source, prefix, is_last),
             AstNode::Function(node) => todo!(),
-            AstNode::Import(node) => todo!(),
+            AstNode::Import(node) => node.fmt_ast(f, source, prefix, is_last),
         }
     }
 }
