@@ -82,6 +82,7 @@ pub fn parse_type_definition(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
 
     let position = type_keyword.position.merge(close_brace.position);
     Ok(AstNode::TypeDef(AstNodeTypeDef {
+        visibility: NodeVisibility::Private,
         name: type_name,
         kind: type_kind,
         value: Box::new(value),
@@ -126,7 +127,11 @@ fn parse_struct_definition(ctx: &mut ParseContext<'_>, keyword_position: Span) -
     }
 
     let position = keyword_position.merge(ctx.tokens.peek_token().position);
-    Ok(AstNode::Struct(AstNodeStruct { fields, position }))
+    Ok(AstNode::Struct(AstNodeStruct {
+        visibility: NodeVisibility::Private,
+        fields,
+        position,
+    }))
 }
 
 fn parse_interface_definition(ctx: &mut ParseContext<'_>, start: Span) -> Result<AstNode> {
@@ -159,6 +164,7 @@ fn parse_interface_definition(ctx: &mut ParseContext<'_>, start: Span) -> Result
 
     let position = start.merge(ctx.tokens.peek_token().position);
     Ok(AstNode::Interface(AstNodeInterface {
+        visibility: NodeVisibility::Private,
         functions,
         position,
     }))
@@ -202,7 +208,11 @@ fn parse_enum_definition(ctx: &mut ParseContext<'_>, start: Span) -> Result<AstN
     }
 
     let position = start.merge(ctx.tokens.peek_token().position);
-    Ok(AstNode::Enum(AstNodeEnum { variants, position }))
+    Ok(AstNode::Enum(AstNodeEnum {
+        visibility: NodeVisibility::Private,
+        variants,
+        position,
+    }))
 }
 
 fn expect_token_type_kind(ctx: &mut ParseContext<'_>) -> Result<(TypeDeclKind, Span)> {

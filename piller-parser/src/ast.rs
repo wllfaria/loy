@@ -37,6 +37,7 @@ impl From<TokenKind> for TypeDeclKind {
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct AstNodeTypeDef {
+    pub visibility: NodeVisibility,
     pub name: IdentifierExpr,
     pub kind: TypeDeclKind,
     pub value: Box<AstNode>,
@@ -46,12 +47,14 @@ pub struct AstNodeTypeDef {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeStruct {
+    pub visibility: NodeVisibility,
     pub fields: Vec<AstNodeStructField>,
     pub position: Span,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeEnum {
+    pub visibility: NodeVisibility,
     pub variants: Vec<AstNodeEnumVariant>,
     pub position: Span,
 }
@@ -74,6 +77,7 @@ pub struct AstNodeFunSignature {
 impl AstNodeFunSignature {
     pub fn into_function_decl(self, body: Expr) -> AstNodeFun {
         AstNodeFun {
+            visibility: NodeVisibility::Private,
             name: self.name,
             generics: self.generics,
             args: self.args,
@@ -86,6 +90,7 @@ impl AstNodeFunSignature {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct AstNodeInterface {
+    pub visibility: NodeVisibility,
     pub functions: Vec<AstNodeFunSignature>,
     pub position: Span,
 }
@@ -140,9 +145,10 @@ pub struct AstNodeGenericDecl {
 pub struct AstNodeFun {
     pub name: IdentifierExpr,
     pub generics: Vec<AstNodeGenericDecl>,
-    pub return_ty: Option<AstNodeTypeAnnotation>,
     pub args: Vec<AstNodeFunArg>,
     pub position: Span,
+    pub visibility: NodeVisibility,
+    pub return_ty: Option<AstNodeTypeAnnotation>,
     pub body: Expr,
 }
 
@@ -153,13 +159,46 @@ pub struct AstNodeFunArg {
     pub position: Span,
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeImportPath {
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeImportAlias {
+    pub position: Span,
+    pub name: IdentifierExpr,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeImportMethods {
+    pub methods: Vec<IdentifierExpr>,
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct AstNodeImport {
+    pub path: AstNodeImportPath,
+    pub alias: Option<AstNodeImportAlias>,
+    pub methods: Option<AstNodeImportMethods>,
+    pub position: Span,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum NodeVisibility {
+    #[default]
+    Private,
+    Public,
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum AstNode {
     TypeDef(AstNodeTypeDef),
     Struct(AstNodeStruct),
     Enum(AstNodeEnum),
     Interface(AstNodeInterface),
-    Function(AstNodeFun),
+    Function(Box<AstNodeFun>),
+    Import(AstNodeImport),
 }
 
 impl AstNode {
@@ -170,6 +209,19 @@ impl AstNode {
             AstNode::Enum(node) => node.position,
             AstNode::Interface(node) => node.position,
             AstNode::Function(node) => node.position,
+            AstNode::Import(node) => node.position,
+        }
+    }
+
+    pub fn set_visibility(&mut self, visibility: NodeVisibility) {
+        match self {
+            AstNode::TypeDef(node) => node.visibility = visibility,
+            AstNode::Struct(node) => node.visibility = visibility,
+            AstNode::Enum(node) => node.visibility = visibility,
+            AstNode::Interface(node) => node.visibility = visibility,
+            AstNode::Function(node) => node.visibility = visibility,
+            // imports have no visibility modifiers
+            AstNode::Import(_) => {}
         }
     }
 }

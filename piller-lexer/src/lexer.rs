@@ -123,7 +123,12 @@ impl<'src> Lexer<'src> {
                 ('"', _, _) => self.take_string(byte_pos)?,
                 ('a'..='z' | 'A'..='Z' | '_', _, _) => self.take_identifier(byte_pos),
                 ('0'..='9', _, _) => self.take_number(byte_pos)?,
-                t => return Err(Error::InvalidToken(format!("unexpected character '{}'", t.0))),
+                t => {
+                    return Err(Error::InvalidToken(format!(
+                        "unexpected character '{}'",
+                        t.0
+                    )));
+                }
             };
 
             tokens.push(token);

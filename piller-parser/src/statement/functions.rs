@@ -9,7 +9,9 @@ use crate::result::{ParseIssue, Result};
 pub fn parse_function_definition(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
     let signature = parse_function_signature(ctx)?;
     let body = parse_expr_block(ctx)?;
-    Ok(AstNode::Function(signature.into_function_decl(body)))
+    Ok(AstNode::Function(Box::new(
+        signature.into_function_decl(body),
+    )))
 }
 
 pub fn parse_function_signature(ctx: &mut ParseContext<'_>) -> Result<AstNodeFunSignature> {
