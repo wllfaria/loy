@@ -41,7 +41,7 @@ pub fn get_operator_context(lhs: &Expr) -> OperatorValidation {
             valid_postfix: &[Dot],
         },
         StructInit(_) => OperatorValidation { valid_postfix: &[] },
-        Return(_) | Break(_) | Continue(_) => OperatorValidation { valid_postfix: &[] },
+        Return(_) | Break(_) | Continue(_) | Comment(_) | DocComment(_) => OperatorValidation { valid_postfix: &[] },
     }
 }
 

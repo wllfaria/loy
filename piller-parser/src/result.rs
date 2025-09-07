@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use miette::{LabeledSpan, SourceSpan};
 use piller_lexer::Span;
 
@@ -28,22 +26,6 @@ impl From<u8> for ReportTitleWeight {
 pub struct ReportTitle {
     message: String,
     weight: ReportTitleWeight,
-}
-
-impl ReportTitle {
-    pub fn new(message: impl ToString) -> Self {
-        Self {
-            message: message.to_string(),
-            weight: 0.into(),
-        }
-    }
-
-    pub fn weighted(message: impl ToString, weight: impl Into<ReportTitleWeight>) -> Self {
-        Self {
-            message: message.to_string(),
-            weight: weight.into(),
-        }
-    }
 }
 
 pub trait IntoReportTitle {
@@ -110,11 +92,6 @@ impl ParseIssue {
 
     pub fn with_report_title(mut self, title: impl IntoReportTitle) -> Self {
         self.error_title = title.into_report_title();
-        self
-    }
-
-    pub fn with_severity(mut self, severity: ErrorSeverity) -> Self {
-        self.severity = severity;
         self
     }
 

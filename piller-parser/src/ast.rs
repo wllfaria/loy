@@ -36,7 +36,7 @@ impl From<TokenKind> for TypeDeclKind {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub struct AstNodeTypeDecl {
+pub struct AstNodeTypeDef {
     pub name: IdentifierExpr,
     pub kind: TypeDeclKind,
     pub value: Box<AstNode>,
@@ -155,7 +155,7 @@ pub struct AstNodeFunArg {
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum AstNode {
-    TypeDecl(AstNodeTypeDecl),
+    TypeDef(AstNodeTypeDef),
     Struct(AstNodeStruct),
     Enum(AstNodeEnum),
     Interface(AstNodeInterface),
@@ -165,7 +165,7 @@ pub enum AstNode {
 impl AstNode {
     pub fn position(&self) -> Span {
         match self {
-            AstNode::TypeDecl(node) => node.position,
+            AstNode::TypeDef(node) => node.position,
             AstNode::Struct(node) => node.position,
             AstNode::Enum(node) => node.position,
             AstNode::Interface(node) => node.position,
@@ -327,6 +327,16 @@ pub struct ContinueExpr {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct CommentExpr {
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub struct DocCommentExpr {
+    pub position: Span,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Expr {
     Block(BlockExpr),
     Binding(BindingExpr),
@@ -349,32 +359,36 @@ pub enum Expr {
     Return(ReturnExpr),
     Break(BreakExpr),
     Continue(ContinueExpr),
+    Comment(CommentExpr),
+    DocComment(DocCommentExpr),
 }
 
 impl Expr {
     pub fn position(&self) -> Span {
         match self {
-            Self::Block(node) => node.position,
-            Self::Binding(node) => node.position,
-            Self::Ident(node) => node.position,
-            Self::Number(node) => node.position,
-            Self::Bool(node) => node.position,
-            Self::String(node) => node.position,
-            Self::Array(node) => node.position,
-            Self::Tuple(node) => node.position,
-            Self::Binary(node) => node.position,
-            Self::Unary(node) => node.position,
-            Self::FunctionCall(node) => node.position,
-            Self::ArrayAccess(node) => node.position,
-            Self::MemberAccess(node) => node.position,
-            Self::If(node) => node.position,
-            Self::SemiColon(node) => node.position,
-            Self::While(node) => node.position,
-            Self::For(node) => node.position,
-            Self::StructInit(node) => node.position,
-            Self::Return(node) => node.position,
-            Self::Break(node) => node.position,
-            Self::Continue(node) => node.position,
+            Self::Block(expr) => expr.position,
+            Self::Binding(expr) => expr.position,
+            Self::Ident(expr) => expr.position,
+            Self::Number(expr) => expr.position,
+            Self::Bool(expr) => expr.position,
+            Self::String(expr) => expr.position,
+            Self::Array(expr) => expr.position,
+            Self::Tuple(expr) => expr.position,
+            Self::Binary(expr) => expr.position,
+            Self::Unary(expr) => expr.position,
+            Self::FunctionCall(expr) => expr.position,
+            Self::ArrayAccess(expr) => expr.position,
+            Self::MemberAccess(expr) => expr.position,
+            Self::If(expr) => expr.position,
+            Self::SemiColon(expr) => expr.position,
+            Self::While(expr) => expr.position,
+            Self::For(expr) => expr.position,
+            Self::StructInit(expr) => expr.position,
+            Self::Return(expr) => expr.position,
+            Self::Break(expr) => expr.position,
+            Self::Continue(expr) => expr.position,
+            Self::Comment(expr) => expr.position,
+            Self::DocComment(expr) => expr.position,
         }
     }
 }
