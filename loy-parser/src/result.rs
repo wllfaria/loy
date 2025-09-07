@@ -1,5 +1,5 @@
+use loy_lexer::Span;
 use miette::{LabeledSpan, SourceSpan};
-use piller_lexer::Span;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use piller_lexer::{NumericalBitSize, Span, TokenKind};
+use loy_lexer::{NumericalBitSize, Span, TokenKind};
 
 pub trait AstFmt {
     fn fmt_ast(

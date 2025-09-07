@@ -1,4 +1,4 @@
-use piller_lexer::TokenKind;
+use loy_lexer::TokenKind;
 
 use super::validation::get_operator_context;
 use super::{consume_optional_comma, parse_expression, parse_identifier};

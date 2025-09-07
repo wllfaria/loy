@@ -1,4 +1,4 @@
-use piller_lexer::{TokenKind, TokenStream};
+use loy_lexer::{TokenKind, TokenStream};
 
 use crate::ast::*;
 use crate::result::{ParseIssue, Result};

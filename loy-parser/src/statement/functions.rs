@@ -1,4 +1,4 @@
-use piller_lexer::TokenKind;
+use loy_lexer::TokenKind;
 
 use super::types::{parse_generics_list, parse_type_annotation};
 use crate::ParseContext;

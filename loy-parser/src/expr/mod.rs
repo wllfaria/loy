@@ -6,7 +6,7 @@ mod primary;
 mod validation;
 
 use binary::parse_binary_expr;
-use piller_lexer::TokenKind;
+use loy_lexer::TokenKind;
 use postfix::parse_postfix_expr;
 pub use primary::parse_identifier;
 use primary::parse_primary_expr;

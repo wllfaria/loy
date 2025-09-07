@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "piller-lexer",
-    "piller-parser",
+    "loy-lexer",
+    "loy-parser",
 ]
 
 [workspace.package]
@@ -10,11 +10,11 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 authors = ["wiru <hello@wiru.st>"]
-repository = "https://github.com/wllfaria/piller"
+repository = "https://github.com/wllfaria/loy"
 
 [workspace.dependencies]
-piller-lexer = { path = "piller-lexer" }
-piller-parser = { path = "piller-parser" }
+loy-lexer = { path = "loy-lexer" }
+loy-parser = { path = "loy-parser" }
 thiserror = "2.0.16"
 miette = { version = "7.6.0", features = ["fancy"] }
 
@@ -27,6 +27,6 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-piller-lexer.workspace = true
-piller-parser.workspace = true
+loy-lexer.workspace = true
+loy-parser.workspace = true
 miette.workspace = true

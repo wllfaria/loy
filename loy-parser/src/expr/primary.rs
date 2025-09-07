@@ -1,4 +1,4 @@
-use piller_lexer::{DisplaySource, Number, TokenKind};
+use loy_lexer::{DisplaySource, Number, TokenKind};
 
 use super::control_flow::*;
 use super::*;

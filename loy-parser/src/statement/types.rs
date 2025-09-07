@@ -1,4 +1,4 @@
-use piller_lexer::TokenKind;
+use loy_lexer::TokenKind;
 
 use crate::ParseContext;
 use crate::ast::*;

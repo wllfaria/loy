@@ -1,4 +1,4 @@
-use piller_lexer::{Span, TokenKind};
+use loy_lexer::{Span, TokenKind};
 
 use super::functions::parse_function_signature;
 use crate::ast::*;
