@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use loy_lexer::{NumericalBitSize, Span, TokenKind};
+use crate::token::{NumericalBitSize, Span, TokenKind};
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct Ast {
@@ -7,7 +7,7 @@ pub struct Ast {
 }
 
 impl Ast {
-    pub(crate) fn new(statements: Vec<AstNode>) -> Self {
+    pub fn new(statements: Vec<AstNode>) -> Self {
         Self { statements }
     }
 

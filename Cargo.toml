@@ -3,6 +3,9 @@ resolver = "2"
 members = [
     "loy-lexer",
     "loy-parser",
+    "loy-ast",
+    "loy-query",
+    "loy-driver",
 ]
 
 [workspace.package]
@@ -15,6 +18,10 @@ repository = "https://github.com/wllfaria/loy"
 [workspace.dependencies]
 loy-lexer = { path = "loy-lexer" }
 loy-parser = { path = "loy-parser" }
+loy-ast = { path = "loy-ast" }
+loy-query = { path = "loy-query" }
+loy-driver = { path = "loy-driver" }
+
 thiserror = "2.0.16"
 miette = { version = "7.6.0", features = ["fancy"] }
 
@@ -29,4 +36,6 @@ repository.workspace = true
 [dependencies]
 loy-lexer.workspace = true
 loy-parser.workspace = true
+loy-query.workspace = true
+loy-driver.workspace = true
 miette.workspace = true

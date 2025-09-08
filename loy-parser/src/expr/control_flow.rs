@@ -1,8 +1,8 @@
-use loy_lexer::TokenKind;
+use loy_ast::ast::*;
+use loy_ast::token::TokenKind;
 
 use super::{parse_expr_block, parse_expression, parse_identifier};
 use crate::ParseContext;
-use crate::ast::*;
 use crate::result::{ParseIssue, Result};
 
 pub fn parse_if_expression(ctx: &mut ParseContext<'_>) -> Result<Expr> {

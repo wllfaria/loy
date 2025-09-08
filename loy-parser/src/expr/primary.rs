@@ -1,9 +1,9 @@
-use loy_lexer::{DisplaySource, Number, TokenKind};
+use loy_ast::ast::*;
+use loy_ast::token::{DisplaySource, Number, TokenKind};
 
 use super::control_flow::*;
 use super::*;
 use crate::ParseContext;
-use crate::ast::*;
 use crate::result::{ParseIssue, Result};
 
 pub fn parse_primary_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {

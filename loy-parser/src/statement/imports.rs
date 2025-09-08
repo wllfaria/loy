@@ -1,7 +1,7 @@
-use loy_lexer::{DisplaySource, TokenKind};
+use loy_ast::ast::*;
+use loy_ast::token::{DisplaySource, TokenKind};
 
 use crate::ParseContext;
-use crate::ast::*;
 use crate::expr::parse_identifier;
 use crate::result::{ParseIssue, Result};
 

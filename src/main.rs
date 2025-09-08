@@ -11,20 +11,15 @@ fn main() -> miette::Result<()> {
     let source = std::fs::read_to_string(filename).unwrap();
     let tokens = loy_lexer::Lexer::new(&source).lex().unwrap();
 
-    let result = loy_parser::parse_token_stream(&mut ParseContext {
-        source: &source,
-        tokens,
-    });
+    let mut parse_context = ParseContext::new(tokens, &source);
+    let ast = match loy_parser::parse_token_stream(&mut parse_context) {
+        Ok(ast) => ast,
+        Err(error) => Err(error
+            .into_report()
+            .with_source_code(NamedSource::new(filename, source.clone())))?,
+    };
 
-    match result {
-        Ok(ast) => println!("{}", ast.dump(&source)),
-        Err(error) => {
-            let report = error
-                .into_report()
-                .with_source_code(NamedSource::new(filename, source));
-            eprintln!("{report:?}");
-        }
-    }
+    println!("{}", ast.dump(&source));
 
     Ok(())
 }

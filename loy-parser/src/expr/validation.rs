@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Operator};
+use loy_ast::ast::{Expr, Operator};
 
 #[derive(Debug, Clone)]
 pub struct OperatorValidation {
@@ -41,7 +41,9 @@ pub fn get_operator_context(lhs: &Expr) -> OperatorValidation {
             valid_postfix: &[Dot],
         },
         StructInit(_) => OperatorValidation { valid_postfix: &[] },
-        Return(_) | Break(_) | Continue(_) | Comment(_) | DocComment(_) => OperatorValidation { valid_postfix: &[] },
+        Return(_) | Break(_) | Continue(_) | Comment(_) | DocComment(_) => {
+            OperatorValidation { valid_postfix: &[] }
+        }
     }
 }
 

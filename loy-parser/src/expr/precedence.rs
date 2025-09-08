@@ -1,4 +1,4 @@
-use crate::ast::Operator;
+use loy_ast::ast::Operator;
 
 #[allow(dead_code)]
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]

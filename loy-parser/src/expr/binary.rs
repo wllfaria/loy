@@ -1,7 +1,8 @@
+use loy_ast::ast::*;
+
 use super::parse_expression;
 use super::precedence::{OperatorLocation, PRECEDENCE_BASE, op_precedence};
 use crate::ParseContext;
-use crate::ast::*;
 use crate::result::{ParseIssue, Result};
 
 pub fn parse_binary_expr(ctx: &mut ParseContext<'_>, lhs: Expr) -> Result<Expr> {

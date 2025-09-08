@@ -1,8 +1,8 @@
-use loy_lexer::TokenKind;
+use loy_ast::ast::*;
+use loy_ast::token::TokenKind;
 
 use super::types::{parse_generics_list, parse_type_annotation};
 use crate::ParseContext;
-use crate::ast::*;
 use crate::expr::{parse_expr_block, parse_identifier};
 use crate::result::{ParseIssue, Result};
 

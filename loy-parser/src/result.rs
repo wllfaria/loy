@@ -1,4 +1,4 @@
-use loy_lexer::Span;
+use loy_ast::token::Span;
 use miette::{LabeledSpan, SourceSpan};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

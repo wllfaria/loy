@@ -1,12 +1,18 @@
-use loy_lexer::{TokenKind, TokenStream};
+use loy_ast::ast::*;
+use loy_ast::token::{TokenKind, TokenStream};
 
-use crate::ast::*;
 use crate::result::{ParseIssue, Result};
 use crate::statement::{parse_function_definition, parse_import, parse_type_definition};
 
 pub struct ParseContext<'src> {
     pub tokens: TokenStream,
     pub source: &'src str,
+}
+
+impl<'src> ParseContext<'src> {
+    pub fn new(tokens: TokenStream, source: &'src str) -> Self {
+        Self { tokens, source }
+    }
 }
 
 pub fn parse_token_stream(ctx: &mut ParseContext<'_>) -> Result<Ast> {

@@ -1,7 +1,7 @@
-use loy_lexer::{Span, TokenKind};
+use loy_ast::ast::*;
+use loy_ast::token::{Span, TokenKind};
 
 use super::functions::parse_function_signature;
-use crate::ast::*;
 use crate::expr::parse_identifier;
 use crate::result::ParseIssue;
 use crate::statement::{parse_generics_list, parse_tuple_type, parse_type_annotation};

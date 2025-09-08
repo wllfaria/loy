@@ -1,8 +1,9 @@
 use std::str::CharIndices;
 
+use loy_ast::token::{IntoToken, Number, Token, TokenKind, TokenStream};
+
 use crate::cursor::{Cursor, is_valid_identifier_char};
 use crate::result::{Error, Result};
-use crate::token::{IntoToken, Number, Token, TokenKind, TokenStream};
 
 #[derive(Debug)]
 pub struct Lexer<'src> {

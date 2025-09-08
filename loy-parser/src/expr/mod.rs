@@ -5,14 +5,14 @@ mod precedence;
 mod primary;
 mod validation;
 
-use binary::parse_binary_expr;
-use loy_lexer::TokenKind;
-use postfix::parse_postfix_expr;
-pub use primary::parse_identifier;
-use primary::parse_primary_expr;
-use validation::get_valid_prefix_operators;
+use loy_ast::ast::*;
+use loy_ast::token::TokenKind;
 
-use crate::ast::*;
+use crate::expr::binary::parse_binary_expr;
+use crate::expr::postfix::parse_postfix_expr;
+pub use crate::expr::primary::parse_identifier;
+use crate::expr::primary::parse_primary_expr;
+use crate::expr::validation::get_valid_prefix_operators;
 use crate::parser::ParseContext;
 use crate::result::{ParseIssue, Result};
 use crate::statement::parse_type_annotation;

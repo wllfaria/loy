@@ -7,6 +7,6 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-loy-lexer.workspace = true
+loy-ast.workspace = true
 thiserror.workspace = true
 miette.workspace = true

@@ -88,9 +88,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd945864f07fe9f5371a27ad7b52a172b4b499999f1d97574c9fa68373937e12"
 
 [[package]]
+name = "loy-ast"
+version = "0.1.0"
+
+[[package]]
+name = "loy-driver"
+version = "0.1.0"
+dependencies = [
+ "loy-ast",
+ "loy-query",
+]
+
+[[package]]
 name = "loy-lexer"
 version = "0.1.0"
 dependencies = [
+ "loy-ast",
  "thiserror",
 ]
 
@@ -98,9 +111,16 @@ dependencies = [
 name = "loy-parser"
 version = "0.1.0"
 dependencies = [
- "loy-lexer",
+ "loy-ast",
  "miette",
  "thiserror",
+]
+
+[[package]]
+name = "loy-query"
+version = "0.1.0"
+dependencies = [
+ "loy-ast",
 ]
 
 [[package]]
@@ -204,8 +224,10 @@ dependencies = [
 name = "scratch"
 version = "0.1.0"
 dependencies = [
+ "loy-driver",
  "loy-lexer",
  "loy-parser",
+ "loy-query",
  "miette",
 ]
 
