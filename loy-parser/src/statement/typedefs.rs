@@ -1,11 +1,11 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::{Span, TokenKind};
 
 use super::functions::parse_function_signature;
+use crate::ParseContext;
 use crate::expr::parse_identifier;
-use crate::result::ParseIssue;
 use crate::statement::{parse_generics_list, parse_tuple_type, parse_type_annotation};
-use crate::{ParseContext, Result};
 
 pub fn parse_type_definition(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
     let type_keyword = ctx.tokens.next_token();

@@ -1,9 +1,9 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::TokenKind;
 
 use super::{parse_expr_block, parse_expression, parse_identifier};
 use crate::ParseContext;
-use crate::result::{ParseIssue, Result};
 
 pub fn parse_if_expression(ctx: &mut ParseContext<'_>) -> Result<Expr> {
     let keyword = ctx.tokens.next_token();

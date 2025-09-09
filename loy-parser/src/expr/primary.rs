@@ -1,10 +1,10 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::{DisplaySource, Number, TokenKind};
 
 use super::control_flow::*;
 use super::*;
 use crate::ParseContext;
-use crate::result::{ParseIssue, Result};
 
 pub fn parse_primary_expr(ctx: &mut ParseContext<'_>) -> Result<Expr> {
     match ctx.tokens.peek() {

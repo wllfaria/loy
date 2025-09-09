@@ -1,5 +1,5 @@
 [package]
-name = "loy-query"
+name = "loy-hir"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,4 +7,6 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+fxhash = "0.2.1"
 loy-ast.workspace = true
+parking_lot = "0.12.4"

@@ -7,5 +7,8 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+fxhash = "0.2.1"
 loy-ast.workspace = true
-loy-query.workspace = true
+loy-hir.workspace = true
+loy-lexer.workspace = true
+loy-parser.workspace = true

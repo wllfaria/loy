@@ -8,5 +8,6 @@ repository.workspace = true
 
 [dependencies]
 loy-ast.workspace = true
+loy-hir.workspace = true
 thiserror.workspace = true
 miette.workspace = true

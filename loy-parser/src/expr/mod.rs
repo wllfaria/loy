@@ -6,6 +6,7 @@ mod primary;
 mod validation;
 
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::TokenKind;
 
 use crate::expr::binary::parse_binary_expr;
@@ -14,7 +15,6 @@ pub use crate::expr::primary::parse_identifier;
 use crate::expr::primary::parse_primary_expr;
 use crate::expr::validation::get_valid_prefix_operators;
 use crate::parser::ParseContext;
-use crate::result::{ParseIssue, Result};
 use crate::statement::parse_type_annotation;
 
 pub fn parse_expression(ctx: &mut ParseContext<'_>) -> Result<Expr> {

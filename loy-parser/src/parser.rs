@@ -1,7 +1,7 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::{TokenKind, TokenStream};
 
-use crate::result::{ParseIssue, Result};
 use crate::statement::{parse_function_definition, parse_import, parse_type_definition};
 
 pub struct ParseContext<'src> {

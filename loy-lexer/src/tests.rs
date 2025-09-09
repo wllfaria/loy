@@ -1,6 +1,7 @@
+use loy_ast::token::{DisplaySource, Number, TokenKind};
+
 use crate::lexer::Lexer;
 use crate::result::Error;
-use crate::token::{DisplaySource, Number, TokenKind};
 
 #[test]
 fn test_lexing_single_line_strings() {

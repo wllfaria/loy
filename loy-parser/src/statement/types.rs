@@ -1,9 +1,9 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::TokenKind;
 
 use crate::ParseContext;
 use crate::expr::parse_identifier;
-use crate::result::{ParseIssue, Result};
 
 pub fn parse_type_annotation(ctx: &mut ParseContext<'_>) -> Result<AstNodeTypeAnnotation> {
     if ctx.tokens.peek().is_primitive() {

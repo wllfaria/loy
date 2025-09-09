@@ -1,10 +1,10 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::TokenKind;
 
 use super::validation::get_operator_context;
 use super::{consume_optional_comma, parse_expression, parse_identifier};
 use crate::ParseContext;
-use crate::result::{ParseIssue, Result};
 
 pub fn parse_postfix_expr(ctx: &mut ParseContext<'_>, mut lhs: Expr) -> Result<Expr> {
     loop {

@@ -1,10 +1,10 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::TokenKind;
 
 use super::types::{parse_generics_list, parse_type_annotation};
 use crate::ParseContext;
 use crate::expr::{parse_expr_block, parse_identifier};
-use crate::result::{ParseIssue, Result};
 
 pub fn parse_function_definition(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
     let signature = parse_function_signature(ctx)?;

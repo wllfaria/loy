@@ -1,5 +1,6 @@
-use loy_ast::token::Span;
 use miette::{LabeledSpan, SourceSpan};
+
+use crate::token::Span;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

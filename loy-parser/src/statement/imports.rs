@@ -1,9 +1,9 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 use loy_ast::token::{DisplaySource, TokenKind};
 
 use crate::ParseContext;
 use crate::expr::parse_identifier;
-use crate::result::{ParseIssue, Result};
 
 pub fn parse_import(ctx: &mut ParseContext<'_>) -> Result<AstNode> {
     let keyword = ctx.tokens.next_token();

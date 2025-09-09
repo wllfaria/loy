@@ -1,9 +1,9 @@
 use loy_ast::ast::*;
+use loy_ast::result::{ParseIssue, Result};
 
 use super::parse_expression;
 use super::precedence::{OperatorLocation, PRECEDENCE_BASE, op_precedence};
 use crate::ParseContext;
-use crate::result::{ParseIssue, Result};
 
 pub fn parse_binary_expr(ctx: &mut ParseContext<'_>, lhs: Expr) -> Result<Expr> {
     parse_with_precedence_from_lhs(ctx, lhs, PRECEDENCE_BASE)
