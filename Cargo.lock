@@ -127,18 +127,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "loy-driver"
-version = "0.1.0"
-dependencies = [
- "fxhash",
- "loy-ast",
- "loy-hir",
- "loy-lexer",
- "loy-parser",
-]
-
-[[package]]
-name = "loy-hir"
+name = "loy-context"
 version = "0.1.0"
 dependencies = [
  "fxhash",
@@ -147,10 +136,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "loy-driver"
+version = "0.1.0"
+dependencies = [
+ "fxhash",
+ "loy-ast",
+ "loy-context",
+ "loy-lexer",
+ "loy-parser",
+]
+
+[[package]]
+name = "loy-hir"
+version = "0.1.0"
+
+[[package]]
 name = "loy-lexer"
 version = "0.1.0"
 dependencies = [
  "loy-ast",
+ "loy-context",
  "loy-hir",
  "thiserror",
 ]
@@ -160,6 +165,7 @@ name = "loy-parser"
 version = "0.1.0"
 dependencies = [
  "loy-ast",
+ "loy-context",
  "loy-hir",
  "miette",
  "thiserror",

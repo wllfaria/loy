@@ -6,6 +6,7 @@ members = [
     "loy-ast",
     "loy-driver",
     "loy-hir",
+    "loy-context",
 ]
 
 [workspace.package]
@@ -20,6 +21,7 @@ loy-lexer = { path = "loy-lexer" }
 loy-parser = { path = "loy-parser" }
 loy-ast = { path = "loy-ast" }
 loy-driver = { path = "loy-driver" }
+loy-context = { path = "loy-context" }
 loy-hir = { path = "loy-hir" }
 
 thiserror = "2.0.16"

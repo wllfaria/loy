@@ -1,5 +1,5 @@
 [package]
-name = "loy-parser"
+name = "loy-context"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,7 +8,5 @@ repository.workspace = true
 
 [dependencies]
 loy-ast.workspace = true
-loy-hir.workspace = true
-loy-context.workspace = true
-thiserror.workspace = true
-miette.workspace = true
+fxhash = "0.2.1"
+parking_lot = "0.12.4"

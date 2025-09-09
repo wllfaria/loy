@@ -7,6 +7,3 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-fxhash = "0.2.1"
-loy-ast.workspace = true
-parking_lot = "0.12.4"

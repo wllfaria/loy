@@ -9,4 +9,5 @@ repository.workspace = true
 [dependencies]
 loy-ast.workspace = true
 loy-hir.workspace = true
+loy-context.workspace = true
 thiserror.workspace = true
