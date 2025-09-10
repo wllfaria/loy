@@ -7,6 +7,7 @@ members = [
     "loy-driver",
     "loy-hir",
     "loy-context",
+    "loy-macros",
 ]
 
 [workspace.package]
@@ -23,6 +24,7 @@ loy-ast = { path = "loy-ast" }
 loy-driver = { path = "loy-driver" }
 loy-context = { path = "loy-context" }
 loy-hir = { path = "loy-hir" }
+loy-macros = { path = "loy-macros" }
 
 thiserror = "2.0.16"
 miette = { version = "7.6.0", features = ["fancy"] }

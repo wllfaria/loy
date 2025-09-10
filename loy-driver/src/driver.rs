@@ -41,6 +41,7 @@ impl<'ctx> Default for Driver<'ctx> {
 }
 
 fn compile_module(tcx: TyCtx<'_>, module_id: ModuleId) -> Result<()> {
+    tcx.parse_module(module_id)?;
     println!("Compiled module {module_id:?}");
     Ok(())
 }

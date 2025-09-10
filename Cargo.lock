@@ -132,6 +132,7 @@ version = "0.1.0"
 dependencies = [
  "fxhash",
  "loy-ast",
+ "loy-macros",
  "parking_lot",
 ]
 
@@ -158,6 +159,15 @@ dependencies = [
  "loy-context",
  "loy-hir",
  "thiserror",
+]
+
+[[package]]
+name = "loy-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

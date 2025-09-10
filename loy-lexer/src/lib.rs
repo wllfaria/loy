@@ -6,6 +6,8 @@ mod result;
 mod tests;
 
 pub use lexer::Lexer;
+use loy_ast::result::ParseIssue;
+use loy_ast::token::Span;
 pub use result::{Error, Result};
 
 pub fn provide(providers: &mut loy_context::query::QueryProviders) {
@@ -15,7 +17,12 @@ pub fn provide(providers: &mut loy_context::query::QueryProviders) {
 fn tokenize_module(
     tcx: loy_context::TyCtx,
     module_id: loy_context::modules::ModuleId,
-) -> loy_ast::token::TokenStream {
+) -> loy_ast::result::Result<loy_ast::token::TokenStream> {
     let source = tcx.get_module_source(module_id);
-    Lexer::new(&source).lex().unwrap()
+    match Lexer::new(&source).lex() {
+        Ok(stream) => Ok(stream),
+        Err(error) => ParseIssue::new(error.to_string(), Span::default())
+            .with_report_title("unknown token")
+            .into_error()?,
+    }
 }

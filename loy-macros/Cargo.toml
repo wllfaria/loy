@@ -1,5 +1,5 @@
 [package]
-name = "loy-context"
+name = "loy-macros"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,9 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-loy-ast.workspace = true
-fxhash = "0.2.1"
-parking_lot = "0.12.4"
-loy-macros.workspace = true
+syn = { version = "2.0.106", features = ["full"] }
+quote = "1.0.40"
+proc-macro2 = "1.0.101" 
+
+[lib]
+proc-macro = true

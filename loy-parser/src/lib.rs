@@ -14,7 +14,7 @@ fn parse_module(
     module_id: loy_context::modules::ModuleId,
 ) -> Result<loy_ast::ast::Ast> {
     let module_source = tcx.get_module_source(module_id);
-    let tokens = tcx.tokenize_module(module_id).steal();
+    let tokens = tcx.tokenize_module(module_id)?.steal();
     let mut context = ParseContext::new(tokens, &module_source);
     let ast = parse_token_stream(&mut context).unwrap();
     println!("{}", ast.dump(&module_source));

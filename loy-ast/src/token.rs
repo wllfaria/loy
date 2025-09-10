@@ -27,7 +27,7 @@ pub trait IntoToken {
 }
 
 /// A span represents a range of characters in the source code
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Span {
     pub start: usize,
     pub end: usize,

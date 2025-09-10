@@ -27,12 +27,12 @@ impl<'ctx> TyCtx<'ctx> {
         Self { gcx }
     }
 
-    pub fn tokenize_module(self, module_id: ModuleId) -> Steal<TokenStream> {
+    pub fn tokenize_module(self, module_id: ModuleId) -> Result<Steal<TokenStream>> {
         if let Some(cached) = self.gcx.query_engine.caches.tokenize_module.get(module_id) {
-            return cached;
+            return Ok(cached);
         }
 
-        let result = (self.gcx.query_engine.providers.tokenize_module)(self, module_id);
+        let result = (self.gcx.query_engine.providers.tokenize_module)(self, module_id)?;
         let result = Steal::new(result);
 
         self.gcx
@@ -41,7 +41,7 @@ impl<'ctx> TyCtx<'ctx> {
             .tokenize_module
             .insert(module_id, result.clone());
 
-        result
+        Ok(result)
     }
 
     pub fn parse_module(self, module_id: ModuleId) -> Result<Steal<Ast>> {
