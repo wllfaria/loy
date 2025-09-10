@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 
+use fxhash::FxHashMap;
 use loy_ast::result::Result;
 use loy_context::query::QueryEngine;
 use loy_context::{GlobalCtx, TyCtx};
@@ -13,6 +14,7 @@ pub struct Driver<'ctx> {
 impl<'ctx> Driver<'ctx> {
     pub fn new() -> Self {
         let mut gcx = GlobalCtx {
+            declarations: RefCell::new(FxHashMap::default()),
             module_map: RefCell::new(ModuleMap::default()),
             query_engine: QueryEngine::default(),
         };
@@ -20,7 +22,7 @@ impl<'ctx> Driver<'ctx> {
         loy_lexer::provide(&mut gcx.query_engine.providers);
         loy_parser::provide(&mut gcx.query_engine.providers);
         loy_typecheck::provide(&mut gcx.query_engine.providers);
-        gcx.query_engine.providers.compile_module = compile_module;
+        gcx.query_engine.providers.module_compile = module_compile;
 
         Self { gcx }
     }
@@ -29,7 +31,7 @@ impl<'ctx> Driver<'ctx> {
         for file in files {
             let module_id = self.gcx.module_map.borrow_mut().add_file(file);
             let tcx = TyCtx::new(&self.gcx);
-            tcx.compile_module(module_id)?;
+            tcx.module_compile(module_id)?;
         }
 
         Ok(())
@@ -42,8 +44,9 @@ impl<'ctx> Default for Driver<'ctx> {
     }
 }
 
-fn compile_module(tcx: TyCtx<'_>, module_id: ModuleId) -> Result<()> {
-    let resolved_module = tcx.resolve_module(module_id);
+fn module_compile(tcx: TyCtx<'_>, module_id: ModuleId) -> Result<()> {
+    let module_imports = tcx.module_imports(module_id);
+    let module_exports = tcx.module_exports(module_id);
     println!("Compiled module {module_id:?}");
     Ok(())
 }

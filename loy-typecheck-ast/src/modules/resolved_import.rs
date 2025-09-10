@@ -9,6 +9,16 @@ pub struct ResolvedImport {
     pub alias: Option<Span>,
 }
 
+impl ResolvedImport {
+    pub fn new(target_module: ModuleId, symbols: ImportedSymbols, alias: Option<Span>) -> Self {
+        Self {
+            target_module,
+            symbols,
+            alias,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum ImportedSymbols {
     All(EntireModuleImport),

@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::ast_visitor::AstVisitor;
+use crate::ast_visitor::{AstVisitor, OwnedAstVisitor};
 use crate::token::{NumericalBitSize, Span, TokenKind};
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -23,12 +23,42 @@ impl Ast {
     {
         for statement in self.statements.iter() {
             match statement {
-                AstNode::TypeDef(node) => visitor.visit_typedef(node),
+                AstNode::TypeDef(node) => match node.value.as_ref() {
+                    AstNode::Struct(node) => visitor.visit_struct(node),
+                    AstNode::Enum(node) => visitor.visit_enum(node),
+                    AstNode::Interface(node) => visitor.visit_interface(node),
+                    AstNode::Function(node) => visitor.visit_function(node),
+                    AstNode::Import(node) => visitor.visit_import(node),
+                    AstNode::TypeDef(_) => unreachable!(),
+                },
                 AstNode::Struct(node) => visitor.visit_struct(node),
                 AstNode::Enum(node) => visitor.visit_enum(node),
                 AstNode::Interface(node) => visitor.visit_interface(node),
                 AstNode::Function(node) => visitor.visit_function(node),
                 AstNode::Import(node) => visitor.visit_import(node),
+            }
+        }
+    }
+
+    pub fn accept_owned<V>(self, visitor: &mut V)
+    where
+        V: OwnedAstVisitor,
+    {
+        for statement in self.statements.into_iter() {
+            match statement {
+                AstNode::TypeDef(node) => match *node.value {
+                    AstNode::Struct(node) => visitor.visit_owned_struct(node),
+                    AstNode::Enum(node) => visitor.visit_owned_enum(node),
+                    AstNode::Interface(node) => visitor.visit_owned_interface(node),
+                    AstNode::Function(node) => visitor.visit_owned_function(node),
+                    AstNode::Import(node) => visitor.visit_owned_import(node),
+                    AstNode::TypeDef(_) => unreachable!(),
+                },
+                AstNode::Struct(node) => visitor.visit_owned_struct(node),
+                AstNode::Enum(node) => visitor.visit_owned_enum(node),
+                AstNode::Interface(node) => visitor.visit_owned_interface(node),
+                AstNode::Function(node) => visitor.visit_owned_function(node),
+                AstNode::Import(node) => visitor.visit_owned_import(node),
             }
         }
     }
@@ -254,13 +284,32 @@ impl AstNode {
 
     pub fn set_visibility(&mut self, visibility: NodeVisibility) {
         match self {
-            AstNode::TypeDef(node) => node.visibility = visibility,
+            AstNode::TypeDef(node) => match node.value.as_mut() {
+                AstNode::TypeDef(node) => node.visibility = visibility,
+                AstNode::Struct(node) => node.visibility = visibility,
+                AstNode::Enum(node) => node.visibility = visibility,
+                AstNode::Interface(node) => node.visibility = visibility,
+                AstNode::Function(node) => node.visibility = visibility,
+                // imports have no visibility modifiers
+                AstNode::Import(_) => {}
+            },
             AstNode::Struct(node) => node.visibility = visibility,
             AstNode::Enum(node) => node.visibility = visibility,
             AstNode::Interface(node) => node.visibility = visibility,
             AstNode::Function(node) => node.visibility = visibility,
             // imports have no visibility modifiers
             AstNode::Import(_) => {}
+        }
+    }
+
+    pub fn visibility(&self) -> NodeVisibility {
+        match self {
+            AstNode::TypeDef(node) => node.visibility,
+            AstNode::Struct(node) => node.visibility,
+            AstNode::Enum(node) => node.visibility,
+            AstNode::Interface(node) => node.visibility,
+            AstNode::Function(node) => node.visibility,
+            AstNode::Import(_) => panic!("attempt to get import visibility"),
         }
     }
 }

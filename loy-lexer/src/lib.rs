@@ -11,10 +11,10 @@ use loy_ast::token::Span;
 pub use result::{Error, Result};
 
 pub fn provide(providers: &mut loy_context::query::QueryProviders) {
-    providers.tokenize_module = tokenize_module;
+    providers.module_token_stream = module_token_stream;
 }
 
-fn tokenize_module(
+fn module_token_stream(
     tcx: loy_context::TyCtx,
     module_id: loy_typecheck_ast::modules::ModuleId,
 ) -> loy_ast::result::Result<loy_ast::token::TokenStream> {

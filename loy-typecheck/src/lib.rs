@@ -1,3 +1,5 @@
+mod module;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -10,35 +12,33 @@ use loy_typecheck_ast::modules::{
     SymbolImport,
 };
 
+use crate::module::declarations::module_declarations;
+use crate::module::exports::module_exports;
+
 pub fn provide(providers: &mut QueryProviders) {
-    providers.resolve_module = resolve_module;
-}
-
-fn resolve_module(ctx: TyCtx<'_>, module_id: ModuleId) -> Arc<Vec<ResolvedImport>> {
-    let ast = ctx.parse_module(module_id).unwrap();
-    let ast = ast.borrow();
-    let source = ctx.get_module_source(module_id);
-
-    let mut visitor = ImportVisitor {
-        ctx,
-        module_id,
-        source: source.clone(),
-        imports: vec![],
-    };
-    ast.accept(&mut visitor);
-
-    Arc::new(visitor.imports)
+    providers.module_imports = module_imports;
+    providers.module_declarations = module_declarations;
+    providers.module_exports = module_exports
 }
 
 #[derive(Debug)]
-pub struct ImportVisitor<'ctx> {
+pub struct ImportCollector<'ctx> {
     ctx: TyCtx<'ctx>,
     module_id: ModuleId,
     source: Arc<String>,
     imports: Vec<ResolvedImport>,
 }
 
-impl ImportVisitor<'_> {
+impl<'ctx> ImportCollector<'ctx> {
+    pub fn new(ctx: TyCtx<'ctx>, module_id: ModuleId, source: Arc<String>) -> Self {
+        Self {
+            ctx,
+            module_id,
+            source,
+            imports: vec![],
+        }
+    }
+
     fn extract_path_string(&self, import: &AstNodeImport) -> &str {
         let path_text = &self.source[import.path.position.into_range()];
         path_text.trim_matches('"') // remove quotes from path string
@@ -89,17 +89,23 @@ impl ImportVisitor<'_> {
     }
 }
 
-impl AstVisitor for ImportVisitor<'_> {
+impl AstVisitor for ImportCollector<'_> {
     fn visit_import(&mut self, import: &AstNodeImport) {
         let path_string = self.extract_path_string(import);
         let absolute_path = self.resolve_path(path_string);
         let target_module = self.ctx.register_module(absolute_path);
         let symbols = self.parse_symbols(import);
-
-        self.imports.push(ResolvedImport {
-            target_module,
-            symbols,
-            alias: import.alias.as_ref().map(|alias| alias.position),
-        });
+        let alias = import.alias.as_ref().map(|alias| alias.position);
+        let import = ResolvedImport::new(target_module, symbols, alias);
+        self.imports.push(import);
     }
+}
+
+fn module_imports(ctx: TyCtx<'_>, module_id: ModuleId) -> Arc<Vec<ResolvedImport>> {
+    let ast = ctx.module_ast(module_id).unwrap();
+    let ast = ast.borrow();
+    let source = ctx.get_module_source(module_id);
+    let mut visitor = ImportCollector::new(ctx, module_id, source.clone());
+    ast.accept(&mut visitor);
+    Arc::new(visitor.imports)
 }

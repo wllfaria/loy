@@ -1,6 +1,6 @@
 import "./other" as K with {foo as bar, bar as foo};
 
-type Foo = interface {
+pub type Foo = interface {
     fun a();
 }
 

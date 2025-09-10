@@ -1,4 +1,6 @@
+pub mod declaration;
 mod resolved_import;
+mod resolved_module;
 
 use std::collections::hash_map::Entry;
 use std::path::PathBuf;
@@ -8,6 +10,7 @@ use fxhash::FxHashMap;
 pub use resolved_import::{
     EntireModuleImport, ImportedSymbols, ResolvedImport, SpecificModuleImport, SymbolImport,
 };
+pub use resolved_module::ResolvedModule;
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub struct ModuleId(u32);
