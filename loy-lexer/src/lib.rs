@@ -16,7 +16,7 @@ pub fn provide(providers: &mut loy_context::query::QueryProviders) {
 
 fn tokenize_module(
     tcx: loy_context::TyCtx,
-    module_id: loy_context::modules::ModuleId,
+    module_id: loy_typecheck_ast::modules::ModuleId,
 ) -> loy_ast::result::Result<loy_ast::token::TokenStream> {
     let source = tcx.get_module_source(module_id);
     match Lexer::new(&source).lex() {

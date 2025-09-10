@@ -5,7 +5,8 @@ members = [
     "loy-parser",
     "loy-ast",
     "loy-driver",
-    "loy-hir",
+    "loy-typecheck",
+    "loy-typecheck-ast",
     "loy-context",
     "loy-macros",
 ]
@@ -23,11 +24,14 @@ loy-parser = { path = "loy-parser" }
 loy-ast = { path = "loy-ast" }
 loy-driver = { path = "loy-driver" }
 loy-context = { path = "loy-context" }
-loy-hir = { path = "loy-hir" }
+loy-typecheck = { path = "loy-typecheck" }
+loy-typecheck-ast = { path = "loy-typecheck-ast" }
 loy-macros = { path = "loy-macros" }
 
 thiserror = "2.0.16"
 miette = { version = "7.6.0", features = ["fancy"] }
+fxhash = "0.2.1"
+parking_lot = "0.12.4"
 
 [package]
 name = "scratch"
@@ -38,7 +42,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-loy-lexer.workspace = true
-loy-parser.workspace = true
 loy-driver.workspace = true
 miette.workspace = true

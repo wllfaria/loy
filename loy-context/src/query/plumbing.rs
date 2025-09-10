@@ -72,9 +72,7 @@ macro_rules! define_engine {
 
 pub(crate) fn default_query(name: &str, key: &dyn std::fmt::Debug) -> ! {
     panic!(
-        "`tcx.{name}({key:?})` is not supported for this key;\n\
-        hint: Queries can be either made to the local crate, or the external crate. \
-        This error means you tried to use it for one that's not supported.\n\
-        If that's not the case, {name} was likely never assigned to a provider function.\n",
+        "`tcx.{name}({key:?})` cannot be called;\n\
+        hint: This means, {name} was likely never assigned to a provider function.\n",
     )
 }

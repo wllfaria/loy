@@ -133,6 +133,7 @@ dependencies = [
  "fxhash",
  "loy-ast",
  "loy-macros",
+ "loy-typecheck-ast",
  "parking_lot",
 ]
 
@@ -145,11 +146,9 @@ dependencies = [
  "loy-context",
  "loy-lexer",
  "loy-parser",
+ "loy-typecheck",
+ "loy-typecheck-ast",
 ]
-
-[[package]]
-name = "loy-hir"
-version = "0.1.0"
 
 [[package]]
 name = "loy-lexer"
@@ -157,7 +156,7 @@ version = "0.1.0"
 dependencies = [
  "loy-ast",
  "loy-context",
- "loy-hir",
+ "loy-typecheck-ast",
  "thiserror",
 ]
 
@@ -176,9 +175,26 @@ version = "0.1.0"
 dependencies = [
  "loy-ast",
  "loy-context",
- "loy-hir",
+ "loy-typecheck-ast",
  "miette",
  "thiserror",
+]
+
+[[package]]
+name = "loy-typecheck"
+version = "0.1.0"
+dependencies = [
+ "loy-ast",
+ "loy-context",
+ "loy-typecheck-ast",
+]
+
+[[package]]
+name = "loy-typecheck-ast"
+version = "0.1.0"
+dependencies = [
+ "fxhash",
+ "loy-ast",
 ]
 
 [[package]]
@@ -321,8 +337,6 @@ name = "scratch"
 version = "0.1.0"
 dependencies = [
  "loy-driver",
- "loy-lexer",
- "loy-parser",
  "miette",
 ]
 

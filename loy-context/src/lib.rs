@@ -1,14 +1,15 @@
+use std::cell::RefCell;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use loy_ast::ast::Ast;
 use loy_ast::result::Result;
 use loy_ast::token::TokenStream;
+use loy_typecheck_ast::modules::{ModuleId, ModuleInfo, ModuleMap, ResolvedImport};
 
-use crate::modules::{ModuleId, ModuleMap};
 use crate::query::QueryEngine;
 use crate::query::steal::Steal;
 
-pub mod modules;
 pub mod query;
 
 #[derive(Debug, Copy, Clone)]
@@ -18,7 +19,7 @@ pub struct TyCtx<'ctx> {
 
 #[derive(Debug)]
 pub struct GlobalCtx<'ctx> {
-    pub module_map: ModuleMap,
+    pub module_map: RefCell<ModuleMap>,
     pub query_engine: QueryEngine<'ctx>,
 }
 
@@ -62,13 +63,50 @@ impl<'ctx> TyCtx<'ctx> {
     }
 
     pub fn get_module_source(self, module_id: ModuleId) -> Arc<String> {
-        if let Some(info) = self.gcx.module_map.get_module_info(module_id) {
+        if let Some(info) = self.gcx.module_map.borrow().get_module_info(module_id) {
             return info.source.clone();
         }
 
         // TODO: when encountering new modules when doing queries, we need a mechanism to insert
         // modules on the fly
         unreachable!();
+    }
+
+    pub fn resolve_module(self, module_id: ModuleId) -> Arc<Vec<ResolvedImport>> {
+        if let Some(module) = self.gcx.query_engine.caches.resolve_module.get(module_id) {
+            return module.clone();
+        }
+
+        let result = (self.gcx.query_engine.providers.resolve_module)(self, module_id);
+
+        self.gcx
+            .query_engine
+            .caches
+            .resolve_module
+            .insert(module_id, result.clone());
+
+        result
+    }
+
+    pub fn register_module(self, path: PathBuf) -> ModuleId {
+        if let Some(module) = self
+            .gcx
+            .module_map
+            .borrow()
+            .get_module_info(ModuleId::from_path(&path))
+        {
+            return module.id;
+        }
+
+        self.gcx.module_map.borrow_mut().add_file(path)
+    }
+
+    pub fn get_module_info(self, module_id: ModuleId) -> Option<ModuleInfo> {
+        self.gcx
+            .module_map
+            .borrow()
+            .get_module_info(module_id)
+            .cloned()
     }
 
     pub fn compile_module(self, module_id: ModuleId) -> Result<()> {

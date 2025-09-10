@@ -1,8 +1,13 @@
+mod resolved_import;
+
 use std::collections::hash_map::Entry;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use fxhash::FxHashMap;
+pub use resolved_import::{
+    EntireModuleImport, ImportedSymbols, ResolvedImport, SpecificModuleImport, SymbolImport,
+};
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub struct ModuleId(u32);
@@ -16,10 +21,11 @@ impl ModuleId {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleInfo {
     pub id: ModuleId,
     pub path: PathBuf,
+    pub absolute_path: PathBuf,
     pub source: Arc<String>,
 }
 
@@ -35,7 +41,13 @@ impl ModuleMap {
         if let Entry::Vacant(e) = self.modules.entry(id) {
             let source = std::fs::read_to_string(&path).expect("failed to read file from disk");
             let source = Arc::new(source);
-            let info = ModuleInfo { id, path, source };
+            let absolute_path = path.canonicalize().expect("failed to canonicalize path");
+            let info = ModuleInfo {
+                id,
+                path,
+                source,
+                absolute_path,
+            };
             e.insert(info);
         }
 

@@ -1,5 +1,5 @@
 [package]
-name = "loy-context"
+name = "loy-typecheck-ast"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,8 +8,5 @@ repository.workspace = true
 
 [dependencies]
 loy-ast.workspace = true
-loy-macros.workspace = true
-loy-typecheck-ast.workspace = true
 
 fxhash.workspace = true
-parking_lot.workspace = true

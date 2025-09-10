@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use crate::ast_visitor::AstVisitor;
 use crate::token::{NumericalBitSize, Span, TokenKind};
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -14,6 +15,22 @@ impl Ast {
     pub fn dump(&self, source: &str) -> String {
         let display = crate::ast_fmt::AstDisplay { ast: self, source };
         format!("{display}")
+    }
+
+    pub fn accept<V>(&self, visitor: &mut V)
+    where
+        V: AstVisitor,
+    {
+        for statement in self.statements.iter() {
+            match statement {
+                AstNode::TypeDef(node) => visitor.visit_typedef(node),
+                AstNode::Struct(node) => visitor.visit_struct(node),
+                AstNode::Enum(node) => visitor.visit_enum(node),
+                AstNode::Interface(node) => visitor.visit_interface(node),
+                AstNode::Function(node) => visitor.visit_function(node),
+                AstNode::Import(node) => visitor.visit_import(node),
+            }
+        }
     }
 }
 
